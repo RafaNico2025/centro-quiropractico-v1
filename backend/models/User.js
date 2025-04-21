@@ -42,6 +42,10 @@ const Usuarios = (sequelize) =>
     SessionToken: {
       type: DataTypes.TEXT,
     },
+    is_admin: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
   },
   {
     tableName: 'Usuarios',
