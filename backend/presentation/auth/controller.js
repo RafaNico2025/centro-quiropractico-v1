@@ -1,8 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import db from '../../database/connection.database.js';
-
-const Usuario = db.models.Usuarios;
+import { Usuarios } from '../../database/connection.database.js';
 
 const register = async (req, res) => {
   try {
@@ -14,12 +12,12 @@ const register = async (req, res) => {
     }
 
     // Chequear si ya existe
-    const existe = await Usuario.findOne({ where: { Username } });
+    const existe = await Usuarios.findOne({ where: { Username } });
     if (existe) return res.status(400).json({ message: 'El usuario ya existe' });
 
     const hashedPassword = await bcrypt.hash(Password, 10);
 
-    const nuevoUsuario = await Usuario.create({
+    const nuevoUsuario = await Usuarios.create({
       Username,
       Password: hashedPassword,
       Nombre,
@@ -39,7 +37,7 @@ const login = async (req, res) => {
   try {
     const { Username, Password } = req.body;
 
-    const usuario = await Usuario.findOne({ where: { Username } });
+    const usuario = await Usuarios.findOne({ where: { Username } });
     if (!usuario) return res.status(404).json({ message: 'Usuario no encontrado' });
 
     const passwordOk = await bcrypt.compare(Password, usuario.Password);

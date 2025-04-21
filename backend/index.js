@@ -1,9 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import routes from './routes/ejemplo.routes.js';
-
-
+import routes from './presentation/routes.js';
+import { sequelize, Usuarios } from './database/connection.database.js';
 
 const app = express();
 
@@ -16,6 +15,15 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Verificar conexión a la base de datos
+try {
+  await sequelize.authenticate();
+  console.log('✅ Conexión a la base de datos establecida correctamente');
+} catch (error) {
+  console.error('❌ Error al conectar con la base de datos:', error);
+}
+
+// Usar las rutas
 app.use('/api/v1', routes);
 
 const PORT = process.env.PORT || 3000;
