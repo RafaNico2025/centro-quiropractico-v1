@@ -1,52 +1,51 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database');
-const bcrypt = require('bcryptjs');
+import { DataTypes } from 'sequelize';
 
-const User = sequelize.define('User', {
-  id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
-    primaryKey: true
-  },
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-    validate: {
-      isEmail: true
-    }
-  },
-  password: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  role: {
-    type: DataTypes.ENUM('admin', 'patient'),
-    defaultValue: 'patient'
-  }
-}, {
-  hooks: {
-    beforeCreate: async (user) => {
-      if (user.password) {
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(user.password, salt);
-      }
+const Usuarios = (sequelize) =>
+  sequelize.define('Usuarios', {
+    Id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
     },
-    beforeUpdate: async (user) => {
-      if (user.changed('password')) {
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(user.password, salt);
-      }
-    }
-  }
-});
+    Username: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+      unique: true,
+    },
+    Password: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    Nombre: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    Apellido: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    Telefono: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    Email: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    LastLogin: {
+      type: DataTypes.DATE,
+    },
+    Habilitado: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+    SessionToken: {
+      type: DataTypes.TEXT,
+    },
+  },
+  {
+    tableName: 'Usuarios',
+    timestamps: false,
+  });
 
-User.prototype.validatePassword = async function(password) {
-  return await bcrypt.compare(password, this.password);
-};
-
-module.exports = User; 
+export default Usuarios;
