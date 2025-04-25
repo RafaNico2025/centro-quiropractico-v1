@@ -1,55 +1,56 @@
 import { DataTypes } from 'sequelize';
 
-const Usuarios = (sequelize) =>
-  sequelize.define('Usuarios', {
-    Id: {
+const User = (sequelize) =>
+  sequelize.define('Users', {
+    id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
-    Username: {
-      type: DataTypes.TEXT,
+    username: {
+      type: DataTypes.STRING,
       allowNull: false,
       unique: true,
     },
-    Password: {
-      type: DataTypes.TEXT,
+    password: {
+      type: DataTypes.STRING,
       allowNull: false,
     },
-    Nombre: {
-      type: DataTypes.TEXT,
+    name: {
+      type: DataTypes.STRING,
       allowNull: false,
     },
-    Apellido: {
-      type: DataTypes.TEXT,
+    lastName: {
+      type: DataTypes.STRING,
       allowNull: false,
     },
-    Telefono: {
-      type: DataTypes.TEXT,
+    phone: {
+      type: DataTypes.STRING,
       allowNull: false,
     },
-    Email: {
-      type: DataTypes.TEXT,
+    email: {
+      type: DataTypes.STRING,
       allowNull: false,
+      unique: true,
     },
-    LastLogin: {
+    role: {
+      type: DataTypes.ENUM('admin', 'user', 'staff'),
+      defaultValue: 'user',
+    },
+    lastLogin: {
       type: DataTypes.DATE,
     },
-    Habilitado: {
+    isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    SessionToken: {
-      type: DataTypes.TEXT,
-    },
-    is_admin: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
+    sessionToken: {
+      type: DataTypes.STRING,
     },
   },
   {
-    tableName: 'Usuarios',
-    timestamps: false,
+    timestamps: true,
+    paranoid: true,
   });
 
-export default Usuarios;
+export default User;

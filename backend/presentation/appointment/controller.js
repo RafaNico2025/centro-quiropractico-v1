@@ -1,14 +1,85 @@
 import { Appointments, Patients, Users } from '../../database/connection.database.js';
 import { Op } from 'sequelize';
+import { sendAppointmentNotification } from '../../services/notification.service.js';
 
-// Crear un nuevo turno
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Appointment:
+ *       type: object
+ *       required:
+ *         - date
+ *         - startTime
+ *         - endTime
+ *         - patientId
+ *         - professionalId
+ *       properties:
+ *         date:
+ *           type: string
+ *           format: date
+ *           description: Fecha de la cita
+ *         startTime:
+ *           type: string
+ *           format: time
+ *           description: Hora de inicio de la cita
+ *         endTime:
+ *           type: string
+ *           format: time
+ *           description: Hora de fin de la cita
+ *         reason:
+ *           type: string
+ *           description: Motivo de la cita
+ *         notes:
+ *           type: string
+ *           description: Notas adicionales
+ *         patientId:
+ *           type: integer
+ *           description: ID del paciente
+ *         professionalId:
+ *           type: integer
+ *           description: ID del profesional
+ *         status:
+ *           type: string
+ *           enum: [scheduled, completed, cancelled, no_show, rescheduled]
+ *           default: scheduled
+ *           description: Estado de la cita
+ */
+
+/**
+ * @swagger
+ * /appointments:
+ *   post:
+ *     summary: Crear una nueva cita
+ *     tags: [Citas]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Appointment'
+ *     responses:
+ *       201:
+ *         description: Cita creada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Appointment'
+ *       400:
+ *         description: Error en la solicitud o horario no disponible
+ *       500:
+ *         description: Error del servidor
+ */
 const createAppointment = async (req, res) => {
   try {
     const { date, startTime, endTime, reason, notes, patientId, professionalId } = req.body;
 
-    // Validar que no exista un turno en el mismo horario
+    // Verificar disponibilidad del horario
     const existingAppointment = await Appointments.findOne({
       where: {
+        professionalId,
         date,
         [Op.or]: [
           {
@@ -21,13 +92,12 @@ const createAppointment = async (req, res) => {
               [Op.between]: [startTime, endTime]
             }
           }
-        ],
-        professionalId
+        ]
       }
     });
 
     if (existingAppointment) {
-      return res.status(400).json({ message: 'Ya existe un turno en ese horario' });
+      return res.status(400).json({ error: 'Ya existe un turno en ese horario' });
     }
 
     const appointment = await Appointments.create({
@@ -41,26 +111,84 @@ const createAppointment = async (req, res) => {
       status: 'scheduled'
     });
 
-    // Aquí se podría agregar la lógica para enviar notificación por WhatsApp
-    // TODO: Implementar notificación por WhatsApp
+    const patient = await Patients.findByPk(patientId);
+
+    // Enviar notificaciones
+    await sendAppointmentNotification(appointment, patient);
 
     res.status(201).json(appointment);
   } catch (error) {
-    console.error('Error al crear turno:', error);
-    res.status(500).json({ message: 'Error al crear el turno' });
+    console.error('Error al crear cita:', error);
+    res.status(500).json({ message: 'Error al crear la cita' });
   }
 };
 
-// Obtener todos los turnos
+/**
+ * @swagger
+ * /appointments:
+ *   get:
+ *     summary: Obtener todas las citas
+ *     tags: [Citas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Fecha de inicio para filtrar citas
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Fecha de fin para filtrar citas
+ *       - in: query
+ *         name: professionalId
+ *         schema:
+ *           type: integer
+ *         description: ID del profesional para filtrar citas
+ *       - in: query
+ *         name: patientId
+ *         schema:
+ *           type: integer
+ *         description: ID del paciente para filtrar citas
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [scheduled, completed, cancelled, no_show, rescheduled]
+ *         description: Estado de las citas a filtrar
+ *     responses:
+ *       200:
+ *         description: Lista de citas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Appointment'
+ *       500:
+ *         description: Error del servidor
+ */
 const getAppointments = async (req, res) => {
   try {
-    const { startDate, endDate, status } = req.query;
+    const { startDate, endDate, professionalId, patientId, status } = req.query;
     const where = {};
 
     if (startDate && endDate) {
       where.date = {
         [Op.between]: [startDate, endDate]
       };
+    }
+
+    if (professionalId) {
+      where.professionalId = professionalId;
+    }
+
+    if (patientId) {
+      where.patientId = patientId;
     }
 
     if (status) {
@@ -70,119 +198,208 @@ const getAppointments = async (req, res) => {
     const appointments = await Appointments.findAll({
       where,
       include: [
-        { model: Patients },
-        { model: Users, as: 'professional' }
+        { model: Patients, attributes: ['firstName', 'lastName', 'phone', 'email'] },
+        { model: Users, as: 'professional', attributes: ['name', 'lastName'] }
       ],
       order: [['date', 'ASC'], ['startTime', 'ASC']]
     });
 
     res.json(appointments);
   } catch (error) {
-    console.error('Error al obtener turnos:', error);
-    res.status(500).json({ message: 'Error al obtener los turnos' });
+    console.error('Error al obtener citas:', error);
+    res.status(500).json({ message: 'Error al obtener las citas' });
   }
 };
 
-// Obtener un turno por ID
+/**
+ * @swagger
+ * /appointments/{id}:
+ *   get:
+ *     summary: Obtener una cita por ID
+ *     tags: [Citas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la cita
+ *     responses:
+ *       200:
+ *         description: Datos de la cita
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Appointment'
+ *       404:
+ *         description: Cita no encontrada
+ *       500:
+ *         description: Error del servidor
+ */
 const getAppointmentById = async (req, res) => {
   try {
     const { id } = req.params;
     const appointment = await Appointments.findByPk(id, {
       include: [
-        { model: Patients },
-        { model: Users, as: 'professional' }
+        { model: Patients, attributes: ['firstName', 'lastName', 'phone', 'email'] },
+        { model: Users, as: 'professional', attributes: ['name', 'lastName'] }
       ]
     });
 
     if (!appointment) {
-      return res.status(404).json({ message: 'Turno no encontrado' });
+      return res.status(404).json({ message: 'Cita no encontrada' });
     }
 
     res.json(appointment);
   } catch (error) {
-    console.error('Error al obtener turno:', error);
-    res.status(500).json({ message: 'Error al obtener el turno' });
+    console.error('Error al obtener cita:', error);
+    res.status(500).json({ message: 'Error al obtener la cita' });
   }
 };
 
-// Actualizar un turno
+/**
+ * @swagger
+ * /appointments/{id}:
+ *   put:
+ *     summary: Actualizar una cita
+ *     tags: [Citas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la cita
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Appointment'
+ *     responses:
+ *       200:
+ *         description: Cita actualizada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Appointment'
+ *       404:
+ *         description: Cita no encontrada
+ *       500:
+ *         description: Error del servidor
+ */
 const updateAppointment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { date, startTime, endTime, reason, notes, status } = req.body;
+    const {
+      date,
+      startTime,
+      endTime,
+      reason,
+      notes,
+      patientId,
+      professionalId,
+      status
+    } = req.body;
 
     const appointment = await Appointments.findByPk(id);
     if (!appointment) {
-      return res.status(404).json({ message: 'Turno no encontrado' });
+      return res.status(404).json({ message: 'Cita no encontrada' });
     }
 
-    // Si se cambia la fecha u hora, validar que no exista conflicto
-    if (date || startTime || endTime) {
+    // Verificar disponibilidad del nuevo horario si se está cambiando
+    if (date || startTime || endTime || professionalId) {
+      const newDate = date || appointment.date;
+      const newStartTime = startTime || appointment.startTime;
+      const newEndTime = endTime || appointment.endTime;
+      const newProfessionalId = professionalId || appointment.professionalId;
+
       const existingAppointment = await Appointments.findOne({
         where: {
           id: { [Op.ne]: id },
-          date: date || appointment.date,
+          professionalId: newProfessionalId,
+          date: newDate,
           [Op.or]: [
             {
               startTime: {
-                [Op.between]: [startTime || appointment.startTime, endTime || appointment.endTime]
+                [Op.between]: [newStartTime, newEndTime]
               }
             },
             {
               endTime: {
-                [Op.between]: [startTime || appointment.startTime, endTime || appointment.endTime]
+                [Op.between]: [newStartTime, newEndTime]
               }
             }
-          ],
-          professionalId: appointment.professionalId
+          ]
         }
       });
 
       if (existingAppointment) {
-        return res.status(400).json({ message: 'Ya existe un turno en ese horario' });
+        return res.status(400).json({ error: 'Ya existe un turno en ese horario' });
       }
     }
 
     await appointment.update({
-      date: date || appointment.date,
-      startTime: startTime || appointment.startTime,
-      endTime: endTime || appointment.endTime,
-      reason: reason || appointment.reason,
-      notes: notes || appointment.notes,
-      status: status || appointment.status
+      date,
+      startTime,
+      endTime,
+      reason,
+      notes,
+      patientId,
+      professionalId,
+      status
     });
-
-    // Si el estado cambió a cancelado, enviar notificación
-    if (status === 'cancelled') {
-      // TODO: Implementar notificación de cancelación
-    }
 
     res.json(appointment);
   } catch (error) {
-    console.error('Error al actualizar turno:', error);
-    res.status(500).json({ message: 'Error al actualizar el turno' });
+    console.error('Error al actualizar cita:', error);
+    res.status(500).json({ message: 'Error al actualizar la cita' });
   }
 };
 
-// Eliminar un turno
+/**
+ * @swagger
+ * /appointments/{id}:
+ *   delete:
+ *     summary: Eliminar una cita
+ *     tags: [Citas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la cita
+ *     responses:
+ *       200:
+ *         description: Cita eliminada exitosamente
+ *       404:
+ *         description: Cita no encontrada
+ *       500:
+ *         description: Error del servidor
+ */
 const deleteAppointment = async (req, res) => {
   try {
     const { id } = req.params;
     const appointment = await Appointments.findByPk(id);
-
     if (!appointment) {
-      return res.status(404).json({ message: 'Turno no encontrado' });
+      return res.status(404).json({ message: 'Cita no encontrada' });
     }
-
     await appointment.destroy();
-    res.json({ message: 'Turno eliminado correctamente' });
+    res.json({ message: 'Cita eliminada exitosamente' });
   } catch (error) {
-    console.error('Error al eliminar turno:', error);
-    res.status(500).json({ message: 'Error al eliminar el turno' });
+    console.error('Error al eliminar cita:', error);
+    res.status(500).json({ message: 'Error al eliminar la cita' });
   }
 };
 
-export default {
+export {
   createAppointment,
   getAppointments,
   getAppointmentById,

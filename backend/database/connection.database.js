@@ -18,10 +18,10 @@ const sequelize = new Sequelize(process.env.SUPABASE_DB, {
 
 // Definir los modelos
 const Users = User(sequelize);
-const Patients = Patient;
-const Appointments = Appointment;
-const MedicalHistories = MedicalHistory;
-const Incomes = Income;
+const Patients = Patient(sequelize);
+const Appointments = Appointment(sequelize);
+const MedicalHistories = MedicalHistory(sequelize);
+const Incomes = Income(sequelize);
 
 // Definir las relaciones
 Patients.hasMany(Appointments, { foreignKey: 'patientId' });
@@ -57,11 +57,11 @@ sequelize.sync({ alter: true })
     console.error('Error al sincronizar modelos:', error);
   });
 
-export { 
-  sequelize, 
-  Users, 
-  Patients, 
-  Appointments, 
-  MedicalHistories, 
-  Incomes 
+export {
+  sequelize,
+  Users,
+  Patients,
+  Appointments,
+  MedicalHistories,
+  Incomes
 };

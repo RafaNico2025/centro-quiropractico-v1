@@ -1,7 +1,65 @@
 import { Users } from '../../database/connection.database.js';
 import bcrypt from 'bcryptjs';
 
-// Obtener todos los usuarios
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       required:
+ *         - Username
+ *         - Password
+ *         - Nombre
+ *         - Apellido
+ *         - Email
+ *       properties:
+ *         Username:
+ *           type: string
+ *           description: Nombre de usuario único
+ *         Password:
+ *           type: string
+ *           description: Contraseña del usuario
+ *         Nombre:
+ *           type: string
+ *           description: Nombre del usuario
+ *         Apellido:
+ *           type: string
+ *           description: Apellido del usuario
+ *         Telefono:
+ *           type: string
+ *           description: Teléfono del usuario
+ *         Email:
+ *           type: string
+ *           format: email
+ *           description: Email del usuario
+ *         Role:
+ *           type: string
+ *           enum: [admin, user, staff]
+ *           default: user
+ *           description: Rol del usuario
+ */
+
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Obtener todos los usuarios
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de usuarios
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ *       500:
+ *         description: Error del servidor
+ */
 const getUsers = async (req, res) => {
   try {
     const users = await Users.findAll({
@@ -15,7 +73,33 @@ const getUsers = async (req, res) => {
   }
 };
 
-// Obtener un usuario por ID
+/**
+ * @swagger
+ * /users/{id}:
+ *   get:
+ *     summary: Obtener un usuario por ID
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del usuario
+ *     responses:
+ *       200:
+ *         description: Datos del usuario
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: Usuario no encontrado
+ *       500:
+ *         description: Error del servidor
+ */
 const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -34,7 +118,32 @@ const getUserById = async (req, res) => {
   }
 };
 
-// Crear un nuevo usuario
+/**
+ * @swagger
+ * /users:
+ *   post:
+ *     summary: Crear un nuevo usuario
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/User'
+ *     responses:
+ *       201:
+ *         description: Usuario creado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Error en la solicitud o usuario ya existe
+ *       500:
+ *         description: Error del servidor
+ */
 const createUser = async (req, res) => {
   try {
     const { Username, Password, Nombre, Apellido, Telefono, Email, Role } = req.body;
@@ -72,7 +181,39 @@ const createUser = async (req, res) => {
   }
 };
 
-// Actualizar un usuario
+/**
+ * @swagger
+ * /users/{id}:
+ *   put:
+ *     summary: Actualizar un usuario
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del usuario
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/User'
+ *     responses:
+ *       200:
+ *         description: Usuario actualizado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: Usuario no encontrado
+ *       500:
+ *         description: Error del servidor
+ */
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -116,7 +257,29 @@ const updateUser = async (req, res) => {
   }
 };
 
-// Eliminar un usuario
+/**
+ * @swagger
+ * /users/{id}:
+ *   delete:
+ *     summary: Eliminar un usuario
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del usuario
+ *     responses:
+ *       204:
+ *         description: Usuario eliminado exitosamente
+ *       404:
+ *         description: Usuario no encontrado
+ *       500:
+ *         description: Error del servidor
+ */
 const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -142,7 +305,47 @@ const deleteUser = async (req, res) => {
   }
 };
 
-// Cambiar contraseña
+/**
+ * @swagger
+ * /users/{id}/change-password:
+ *   put:
+ *     summary: Cambiar contraseña de usuario
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del usuario
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 description: Contraseña actual
+ *               newPassword:
+ *                 type: string
+ *                 description: Nueva contraseña
+ *     responses:
+ *       200:
+ *         description: Contraseña actualizada exitosamente
+ *       401:
+ *         description: Contraseña actual incorrecta
+ *       404:
+ *         description: Usuario no encontrado
+ *       500:
+ *         description: Error del servidor
+ */
 const changePassword = async (req, res) => {
   try {
     const { id } = req.params;

@@ -1,8 +1,10 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 import routes from './presentation/routes.js';
-import { sequelize, Usuarios } from './database/connection.database.js';
+import { sequelize, Users } from './database/connection.database.js';
+import specs from './config/swagger.js';
 
 const app = express();
 
@@ -14,6 +16,13 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// Configurar Swagger
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: "API Centro Quiropráctico"
+}));
 
 // Verificar conexión a la base de datos
 try {
@@ -29,4 +38,5 @@ app.use('/api/v1', routes);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`Documentación de la API disponible en http://localhost:${PORT}/api-docs`);
 });
