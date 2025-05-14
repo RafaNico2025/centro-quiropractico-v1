@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { authService } from '../services/auth.service'
 
 export default function Register() {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -12,10 +14,21 @@ export default function Register() {
     role: 'patient' // 'patient' o 'admin'
   })
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Aquí iría la lógica de registro
-    console.log('Form data:', formData)
+    if (formData.password !== formData.confirmPassword) {
+      alert('Las contraseñas no coinciden')
+      return
+    }
+    try {
+      const response = await authService.register(formData)
+      console.log('Usuario registrado:', response)
+      // Redirigir al login o mostrar mensaje de éxito
+      navigate('/login')
+    } catch (error) {
+      console.error('Error al registrar:', error)
+      alert('Error al registrar: ' + (error.message || 'Error desconocido'))
+    }
   }
 
   const handleChange = (e) => {

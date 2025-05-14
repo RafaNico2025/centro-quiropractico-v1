@@ -1,10 +1,12 @@
-import api from './api';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:3000/api/v1';
 
 export const authService = {
   // Login
   login: async (username, password) => {
     try {
-      const response = await api.post('/auth/login', { username, password });
+      const response = await axios.post(`${API_URL}/auth/login`, { username, password });
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -30,5 +32,10 @@ export const authService = {
   // Verificar si está autenticado
   isAuthenticated: () => {
     return !!localStorage.getItem('token');
+  },
+
+  register: async (userData) => {
+    const response = await axios.post(`${API_URL}/auth/register`, userData);
+    return response.data;
   }
 }; 
