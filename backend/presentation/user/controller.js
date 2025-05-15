@@ -1,5 +1,6 @@
 import { Users, Patients } from '../../database/connection.database.js';
 import bcrypt from 'bcryptjs';
+import { Op } from 'sequelize';
 
 /**
  * @swagger
@@ -408,9 +409,12 @@ const getProfessionals = async (req, res) => {
   try {
     const professionals = await Users.findAll({
       where: {
-        role: 'staff'
+        role: {
+          [Op.in]: ['staff', 'admin']
+        },
+        isActive: true
       },
-      attributes: ['id', 'name', 'lastName', 'email', 'role']
+      attributes: ['id', 'name', 'lastName', 'email', 'role', 'phone']
     })
 
     res.json(professionals)

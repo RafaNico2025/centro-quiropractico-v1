@@ -75,6 +75,7 @@ import { sendAppointmentNotification } from '../../services/notification.service
 const createAppointment = async (req, res) => {
   try {
     const { date, startTime, endTime, reason, notes, patientId, professionalId } = req.body;
+    const createdBy = req.user.id;
 
     // Verificar disponibilidad del horario
     const existingAppointment = await Appointments.findOne({
@@ -108,6 +109,7 @@ const createAppointment = async (req, res) => {
       notes,
       patientId,
       professionalId,
+      createdBy,
       status: 'scheduled'
     });
 
@@ -198,16 +200,36 @@ const getAppointments = async (req, res) => {
     const appointments = await Appointments.findAll({
       where,
       include: [
-        { model: Patients, attributes: ['firstName', 'lastName', 'phone', 'email'] },
-        { model: Users, as: 'professional', attributes: ['name', 'lastName'] }
+        { 
+          model: Patients, 
+          attributes: ['id', 'firstName', 'lastName', 'phone', 'email'],
+          required: true
+        },
+        { 
+          model: Users, 
+          as: 'professional',
+          attributes: ['id', 'name', 'lastName', 'email'],
+          required: true
+        }
       ],
       order: [['date', 'ASC'], ['startTime', 'ASC']]
     });
 
-    res.json(appointments);
+    // Asegurarse de que las fechas se envíen en el formato correcto
+    const formattedAppointments = appointments.map(appointment => ({
+      ...appointment.toJSON(),
+      date: appointment.date,
+      startTime: appointment.startTime,
+      endTime: appointment.endTime
+    }));
+
+    res.json(formattedAppointments);
   } catch (error) {
     console.error('Error al obtener citas:', error);
-    res.status(500).json({ message: 'Error al obtener las citas' });
+    res.status(500).json({ 
+      message: 'Error al obtener las citas',
+      error: error.message 
+    });
   }
 };
 

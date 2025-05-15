@@ -55,7 +55,14 @@ export function AppointmentForm({ open, onOpenChange, onSuccess }) {
     setLoading(true)
 
     try {
-      await appointmentService.create(formData)
+      const appointmentData = {
+        ...formData,
+        date: formData.date,
+        patientId: parseInt(formData.patientId),
+        professionalId: parseInt(formData.professionalId)
+      }
+
+      await appointmentService.create(appointmentData)
       toast({
         title: "Éxito",
         description: "Cita creada correctamente"
@@ -140,15 +147,18 @@ export function AppointmentForm({ open, onOpenChange, onSuccess }) {
           <div className="space-y-2">
             <Label htmlFor="patientId">Paciente</Label>
             <Select
-              value={formData.patientId}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, patientId: value }))}
+              value={formData.patientId.toString()}
+              onValueChange={(value) => {
+                console.log('Paciente seleccionado:', value);
+                setFormData(prev => ({ ...prev, patientId: parseInt(value) }));
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar paciente" />
               </SelectTrigger>
               <SelectContent>
                 {patients.map(patient => (
-                  <SelectItem key={patient.id} value={patient.id}>
+                  <SelectItem key={patient.id} value={patient.id.toString()}>
                     {patient.firstName} {patient.lastName}
                   </SelectItem>
                 ))}
@@ -159,15 +169,18 @@ export function AppointmentForm({ open, onOpenChange, onSuccess }) {
           <div className="space-y-2">
             <Label htmlFor="professionalId">Profesional</Label>
             <Select
-              value={formData.professionalId}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, professionalId: value }))}
+              value={formData.professionalId.toString()}
+              onValueChange={(value) => {
+                console.log('Profesional seleccionado:', value);
+                setFormData(prev => ({ ...prev, professionalId: parseInt(value) }));
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar profesional" />
               </SelectTrigger>
               <SelectContent>
                 {professionals.map(professional => (
-                  <SelectItem key={professional.id} value={professional.id}>
+                  <SelectItem key={professional.id} value={professional.id.toString()}>
                     {professional.name} {professional.lastName}
                   </SelectItem>
                 ))}

@@ -6,12 +6,15 @@ import { useToast } from '../components/ui/use-toast'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { AppointmentForm } from '../components/AppointmentForm'
+import { useNavigate } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 
 export default function Appointments() {
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const { toast } = useToast()
+  const navigate = useNavigate()
 
   useEffect(() => {
     loadAppointments()
@@ -51,19 +54,62 @@ export default function Appointments() {
 
   const getTodayAppointments = () => {
     const today = new Date()
+    today.setHours(0, 0, 0, 0)
     return appointments.filter(appointment => {
       const appointmentDate = new Date(appointment.date)
-      return appointmentDate.toDateString() === today.toDateString()
+      appointmentDate.setHours(0, 0, 0, 0)
+      return appointmentDate.getTime() === today.getTime()
     })
   }
 
   const getUpcomingAppointments = () => {
     const today = new Date()
+    today.setHours(0, 0, 0, 0)
     return appointments.filter(appointment => {
       const appointmentDate = new Date(appointment.date)
-      return appointmentDate > today
+      appointmentDate.setHours(0, 0, 0, 0)
+      return appointmentDate.getTime() > today.getTime()
     })
   }
+
+  const formatTime = (timeString) => {
+    if (!timeString) return '';
+    // Asegurarse de que el tiempo tenga el formato correcto
+    const [hours, minutes] = timeString.split(':');
+    return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    try {
+      return format(new Date(dateString), 'PPP', { locale: es });
+    } catch (error) {
+      console.error('Error al formatear fecha:', error);
+      return dateString;
+    }
+  }
+
+  // --- NUEVO: Cálculo del calendario del mes actual ---
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth(); // 0-indexed
+  const firstDayOfMonth = new Date(year, month, 1);
+  const lastDayOfMonth = new Date(year, month + 1, 0);
+  const daysInMonth = lastDayOfMonth.getDate();
+  // Día de la semana (0=domingo, 1=lunes, ..., 6=sábado)
+  let startDay = firstDayOfMonth.getDay();
+  // Ajustar para que el calendario empiece en lunes
+  startDay = startDay === 0 ? 6 : startDay - 1;
+  // Total de celdas a mostrar (días + vacíos)
+  const totalCells = Math.ceil((startDay + daysInMonth) / 7) * 7;
+  // --- FIN NUEVO ---
+
+  // Función para obtener la fecha en formato YYYY-MM-DD
+  const getYYYYMMDD = (year, month, day) => {
+    const mm = (month + 1).toString().padStart(2, '0');
+    const dd = day.toString().padStart(2, '0');
+    return `${year}-${mm}-${dd}`;
+  };
 
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Cargando...</div>
@@ -71,8 +117,18 @@ export default function Appointments() {
 
   return (
     <div className="container mx-auto p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Citas</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="hover:bg-accent"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-3xl font-bold">Citas</h1>
+        </div>
         <Button onClick={() => setShowForm(true)}>Nueva Cita</Button>
       </div>
 
@@ -86,9 +142,9 @@ export default function Appointments() {
               {getTodayAppointments().map((appointment) => (
                 <div key={appointment.id} className="flex items-center justify-between border-b pb-4">
                   <div>
-                    <p className="font-medium">{appointment.Patient.firstName} {appointment.Patient.lastName}</p>
+                    <p className="font-medium">{appointment.Patient?.firstName} {appointment.Patient?.lastName}</p>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(appointment.startTime), 'HH:mm')} - {appointment.reason}
+                      {formatTime(appointment.startTime)} - {appointment.reason}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -127,9 +183,9 @@ export default function Appointments() {
               {getUpcomingAppointments().map((appointment) => (
                 <div key={appointment.id} className="flex items-center justify-between border-b pb-4">
                   <div>
-                    <p className="font-medium">{appointment.Patient.firstName} {appointment.Patient.lastName}</p>
+                    <p className="font-medium">{appointment.Patient?.firstName} {appointment.Patient?.lastName}</p>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(appointment.date), 'PPP', { locale: es })} - {format(new Date(appointment.startTime), 'HH:mm')}
+                      {formatDate(appointment.date)} - {formatTime(appointment.startTime)}
                     </p>
                     <p className="text-sm text-muted-foreground">{appointment.reason}</p>
                   </div>
@@ -169,32 +225,34 @@ export default function Appointments() {
                   {day}
                 </div>
               ))}
-              {Array.from({ length: 35 }).map((_, index) => {
-                const currentDate = new Date()
-                currentDate.setDate(currentDate.getDate() + index)
-                const dayAppointments = appointments.filter(appointment => {
-                  const appointmentDate = new Date(appointment.date)
-                  return appointmentDate.toDateString() === currentDate.toDateString()
-                })
-
+              {Array.from({ length: totalCells }).map((_, index) => {
+                const dayNumber = index - startDay + 1;
+                const isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth;
+                let cellDateString = '';
+                if (isCurrentMonth) {
+                  cellDateString = getYYYYMMDD(year, month, dayNumber);
+                }
+                const dayAppointments = isCurrentMonth
+                  ? appointments.filter(appointment => appointment.date === cellDateString)
+                  : [];
                 return (
                   <div
                     key={index}
-                    className="h-24 rounded-lg border p-2 hover:bg-accent"
+                    className={`h-24 rounded-lg border p-2 hover:bg-accent flex flex-col ${!isCurrentMonth ? 'bg-muted text-muted-foreground' : ''}`}
                   >
-                    <div className="text-sm font-medium">{currentDate.getDate()}</div>
-                    <div className="mt-1 space-y-1">
+                    <div className="text-sm font-medium">{isCurrentMonth ? dayNumber : ''}</div>
+                    <div className="mt-1 space-y-1 overflow-y-auto max-h-16 pr-1">
                       {dayAppointments.map(appointment => (
                         <div 
                           key={appointment.id}
-                          className="rounded bg-primary/10 p-1 text-xs"
+                          className="rounded bg-primary/10 p-1 text-xs whitespace-nowrap overflow-hidden text-ellipsis"
                         >
-                          {format(new Date(appointment.startTime), 'HH:mm')} - {appointment.Patient.firstName}
+                          {formatTime(appointment.startTime)} - {appointment.Patient?.firstName}
                         </div>
                       ))}
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           </CardContent>

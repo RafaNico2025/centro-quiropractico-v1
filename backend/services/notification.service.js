@@ -59,7 +59,7 @@ export const sendAppointmentNotification = async (appointment, patient) => {
   const whatsappMessage = `
     🏥 Centro Quiropráctico - Recordatorio de Turno
     Paciente: ${patient.name}
-    Fecha: ${appointment.date.toLocaleDateString()}
+    Fecha: ${new Date(appointment.date).toLocaleDateString()}
     Hora: ${appointment.startTime}
     Motivo: ${appointment.reason || 'No especificado'}
     Por favor, confirme su asistencia respondiendo SI o NO
@@ -70,7 +70,7 @@ export const sendAppointmentNotification = async (appointment, patient) => {
     <p>Estimado/a ${patient.name},</p>
     <p>Le recordamos que tiene un turno programado para:</p>
     <ul>
-      <li>Fecha: ${appointment.date.toLocaleDateString()}</li>
+      <li>Fecha: ${new Date(appointment.date).toLocaleDateString()}</li>
       <li>Hora: ${appointment.startTime}</li>
       <li>Motivo: ${appointment.reason || 'No especificado'}</li>
     </ul>
