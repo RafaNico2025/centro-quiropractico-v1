@@ -2,8 +2,8 @@ import React from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-export function ProtectedRoute({ children, requireAdmin = false }) {
-  const { user, isAdmin, loading } = useAuth()
+export const ProtectedRoute = ({ children, requireAdmin = false }) => {
+  const { user, loading } = useAuth()
 
   if (loading) {
     return <div>Cargando...</div>
@@ -13,7 +13,7 @@ export function ProtectedRoute({ children, requireAdmin = false }) {
     return <Navigate to="/login" />
   }
 
-  if (requireAdmin && !isAdmin()) {
+  if (requireAdmin && user.role !== 'admin') {
     return <Navigate to="/patient-dashboard" />
   }
 

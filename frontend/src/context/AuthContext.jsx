@@ -1,41 +1,53 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useState, useContext, useEffect } from 'react';
+import { authService } from '../services/auth.service';
 
-const AuthContext = createContext()
+const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar si hay un usuario en localStorage al cargar la app
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
+    const user = authService.getCurrentUser();
+    if (user) {
+      setUser(user);
     }
-    setLoading(false)
-  }, [])
+    setLoading(false);
+  }, []);
 
-  const login = (userData) => {
-    setUser(userData)
-    localStorage.setItem('user', JSON.stringify(userData))
-  }
+  const login = async (username, password) => {
+    try {
+      const data = await authService.login(username, password);
+      setUser(data);
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
 
   const logout = () => {
-    setUser(null)
-    localStorage.removeItem('user')
-  }
+    authService.logout();
+    setUser(null);
+  };
 
-  const isAdmin = () => {
-    return user?.role === 'admin'
-  }
+  const value = {
+    user,
+    login,
+    logout,
+    loading
+  };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin, loading }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
-  )
-}
+  );
+};
 
-export function useAuth() {
-  return useContext(AuthContext)
-} 
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
+  }
+  return context;
+}; 

@@ -15,8 +15,8 @@ import Appointments from './pages/Appointments'
 
 export default function App() {
   return (
-    <Router>
-      <AuthProvider>
+    <AuthProvider>
+      <Router>
         <Routes>
           {/* Rutas públicas */}
           <Route path="/" element={<LandingPage />} />
@@ -83,7 +83,7 @@ export default function App() {
             }
           />
         </Routes>
-      </AuthProvider>
-    </Router>
+      </Router>
+    </AuthProvider>
   )
 } 

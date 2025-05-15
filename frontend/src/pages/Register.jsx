@@ -7,11 +7,14 @@ import { authService } from '../services/auth.service'
 export default function Register() {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
+    username: '',
     name: '',
+    lastName: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
-    role: 'patient' // 'patient' o 'admin'
+    role: 'patient'
   })
 
   const handleSubmit = async (e) => {
@@ -21,9 +24,9 @@ export default function Register() {
       return
     }
     try {
-      const response = await authService.register(formData)
+      const { confirmPassword, ...userData } = formData
+      const response = await authService.register(userData)
       console.log('Usuario registrado:', response)
-      // Redirigir al login o mostrar mensaje de éxito
       navigate('/login')
     } catch (error) {
       console.error('Error al registrar:', error)
@@ -43,13 +46,28 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">Registro</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Registro de Paciente</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                Nombre de Usuario
+              </label>
+              <input
+                type="text"
+                name="username"
+                id="username"
+                required
+                value={formData.username}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Nombre Completo
+                Nombre
               </label>
               <input
                 type="text"
@@ -57,6 +75,21 @@ export default function Register() {
                 id="name"
                 required
                 value={formData.name}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                Apellido
+              </label>
+              <input
+                type="text"
+                name="lastName"
+                id="lastName"
+                required
+                value={formData.lastName}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               />
@@ -72,6 +105,21 @@ export default function Register() {
                 id="email"
                 required
                 value={formData.email}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                Teléfono
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                id="phone"
+                required
+                value={formData.phone}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               />
@@ -108,37 +156,21 @@ export default function Register() {
             </div>
 
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                Tipo de Usuario
-              </label>
-              <select
-                name="role"
-                id="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="patient">Paciente</option>
-                <option value="admin">Administrador</option>
-              </select>
-            </div>
-
-            <div>
               <Button
                 type="submit"
                 className="w-full"
               >
-                Registrarse
+                Registrarse como Paciente
               </Button>
             </div>
 
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                ¿Ya tienes una cuenta?{' '}
-                <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
-                  Inicia sesión
-                </Link>
-              </p>
+            <div className="flex flex-col items-center space-y-4">
+              <Link to="/login" className="text-sm text-blue-600 hover:text-blue-500">
+                ¿Ya tienes una cuenta? Inicia sesión
+              </Link>
+              <Link to="/" className="text-sm text-gray-600 hover:text-gray-500">
+                ← Volver al inicio
+              </Link>
             </div>
           </form>
         </CardContent>

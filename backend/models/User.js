@@ -34,8 +34,8 @@ const User = (sequelize) =>
       unique: true,
     },
     role: {
-      type: DataTypes.ENUM('admin', 'user', 'staff'),
-      defaultValue: 'user',
+      type: DataTypes.ENUM('admin', 'patient', 'staff'),
+      defaultValue: 'patient',
     },
     lastLogin: {
       type: DataTypes.DATE,

@@ -1,14 +1,19 @@
-import { Router } from 'express';
-import userController from './controller.js';
+import express from 'express'
+import { authenticateToken } from '../../middleware/auth.middleware.js'
+import userController from './controller.js'
 
-const router = Router();
+const router = express.Router()
 
 // Rutas para usuarios
-router.get('/', userController.getUsers);
-router.get('/:id', userController.getUserById);
-router.post('/', userController.createUser);
-router.put('/:id', userController.updateUser);
-router.delete('/:id', userController.deleteUser);
-router.post('/:id/change-password', userController.changePassword);
+router.get('/', userController.getUsers)
+router.get('/:id', userController.getUserById)
+router.post('/', userController.createUser)
+router.put('/:id', userController.updateUser)
+router.delete('/:id', userController.deleteUser)
+router.post('/:id/change-password', userController.changePassword)
 
-export default router;
+// Rutas protegidas
+router.get('/professionals', authenticateToken, userController.getProfessionals)
+router.get('/patients', authenticateToken, userController.getPatients)
+
+export default router

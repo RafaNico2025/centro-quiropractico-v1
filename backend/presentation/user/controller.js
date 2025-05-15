@@ -1,4 +1,4 @@
-import { Users } from '../../database/connection.database.js';
+import { Users, Patients } from '../../database/connection.database.js';
 import bcrypt from 'bcryptjs';
 
 /**
@@ -373,11 +373,104 @@ const changePassword = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /users/professionals:
+ *   get:
+ *     summary: Obtener lista de profesionales
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de profesionales
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   name:
+ *                     type: string
+ *                   lastName:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *                   role:
+ *                     type: string
+ *       500:
+ *         description: Error del servidor
+ */
+const getProfessionals = async (req, res) => {
+  try {
+    const professionals = await Users.findAll({
+      where: {
+        role: 'staff'
+      },
+      attributes: ['id', 'name', 'lastName', 'email', 'role']
+    })
+
+    res.json(professionals)
+  } catch (error) {
+    console.error('Error al obtener profesionales:', error)
+    res.status(500).json({ message: 'Error al obtener los profesionales' })
+  }
+}
+
+/**
+ * @swagger
+ * /patients:
+ *   get:
+ *     summary: Obtener lista de pacientes
+ *     tags: [Pacientes]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de pacientes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   firstName:
+ *                     type: string
+ *                   lastName:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *                   phone:
+ *                     type: string
+ *       500:
+ *         description: Error del servidor
+ */
+const getPatients = async (req, res) => {
+  try {
+    const patients = await Patients.findAll({
+      attributes: ['id', 'firstName', 'lastName', 'email', 'phone']
+    })
+
+    res.json(patients)
+  } catch (error) {
+    console.error('Error al obtener pacientes:', error)
+    res.status(500).json({ message: 'Error al obtener los pacientes' })
+  }
+}
+
 export default {
   getUsers,
   getUserById,
   createUser,
   updateUser,
   deleteUser,
-  changePassword
+  changePassword,
+  getProfessionals,
+  getPatients
 }; 
