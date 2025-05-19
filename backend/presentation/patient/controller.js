@@ -1,4 +1,5 @@
-import { Patients } from '../../database/connection.database.js';
+import { Patients, Users } from '../../database/connection.database.js';
+import { Op } from 'sequelize';
 
 /**
  * @swagger
@@ -85,13 +86,29 @@ const createPatient = async (req, res) => {
       birthDate,
       gender,
       emergencyContact,
-      emergencyPhone
+      emergencyPhone,
+      createUser = false
     } = req.body;
 
     // Validar que no exista un paciente con el mismo DNI
     const existingPatient = await Patients.findOne({ where: { dni } });
     if (existingPatient) {
       return res.status(400).json({ message: 'Ya existe un paciente con ese DNI' });
+    }
+
+    // Si se solicita crear usuario, verificar que no exista
+    if (createUser) {
+      const existingUser = await Users.findOne({ 
+        where: { 
+          [Op.or]: [
+            { email },
+            { username: dni }
+          ]
+        } 
+      });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Ya existe un usuario con ese email o DNI' });
+      }
     }
 
     const patient = await Patients.create({
@@ -104,7 +121,8 @@ const createPatient = async (req, res) => {
       birthDate,
       gender,
       emergencyContact,
-      emergencyPhone
+      emergencyPhone,
+      hasUserAccount: createUser
     });
 
     res.status(201).json(patient);
@@ -151,7 +169,20 @@ const getPatients = async (req, res) => {
         { dni: { [Op.iLike]: `%${search}%` } }
       ];
     }
-    const patients = await Patients.findAll({ where });
+    const patients = await Patients.findAll({ 
+      where,
+      attributes: [
+        'id', 
+        'firstName', 
+        'lastName', 
+        'dni', 
+        'phone', 
+        'email', 
+        'hasUserAccount',
+        'createdAt',
+        'updatedAt'
+      ]
+    });
     res.json(patients);
   } catch (error) {
     console.error('Error al obtener pacientes:', error);

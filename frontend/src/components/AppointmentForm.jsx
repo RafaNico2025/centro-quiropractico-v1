@@ -9,7 +9,7 @@ import { appointmentService } from '../services/appointment.service'
 import { userService } from '../services/user.service'
 import { useToast } from './ui/use-toast'
 
-export function AppointmentForm({ open, onOpenChange, onSuccess }) {
+export function AppointmentForm({ open, onOpenChange, onSuccess, appointment }) {
   const [formData, setFormData] = useState({
     date: '',
     startTime: '',
@@ -47,8 +47,29 @@ export function AppointmentForm({ open, onOpenChange, onSuccess }) {
 
     if (open) {
       loadData()
+      if (appointment) {
+        setFormData({
+          date: appointment.date,
+          startTime: appointment.startTime,
+          endTime: appointment.endTime,
+          reason: appointment.reason || '',
+          notes: appointment.notes || '',
+          patientId: appointment.patientId.toString(),
+          professionalId: appointment.professionalId.toString()
+        })
+      } else {
+        setFormData({
+          date: '',
+          startTime: '',
+          endTime: '',
+          reason: '',
+          notes: '',
+          patientId: '',
+          professionalId: ''
+        })
+      }
     }
-  }, [open])
+  }, [open, appointment])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -62,17 +83,29 @@ export function AppointmentForm({ open, onOpenChange, onSuccess }) {
         professionalId: parseInt(formData.professionalId)
       }
 
-      await appointmentService.create(appointmentData)
-      toast({
-        title: "Éxito",
-        description: "Cita creada correctamente"
-      })
-      onSuccess?.()
+      if (appointment) {
+        await appointmentService.update(appointment.id, {
+          ...appointmentData,
+          status: 'rescheduled'
+        })
+        toast({
+          title: "Éxito",
+          description: "Cita reagendada correctamente"
+        })
+      } else {
+        await appointmentService.create(appointmentData)
+        toast({
+          title: "Éxito",
+          description: "Cita creada correctamente"
+        })
+      }
+
+      onSuccess()
       onOpenChange(false)
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "No se pudo crear la cita",
+        description: error.message || "No se pudo procesar la cita",
         variant: "destructive"
       })
     } finally {
@@ -104,7 +137,7 @@ export function AppointmentForm({ open, onOpenChange, onSuccess }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Nueva Cita</DialogTitle>
+          <DialogTitle>{appointment ? 'Reagendar Cita' : 'Nueva Cita'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -120,7 +153,7 @@ export function AppointmentForm({ open, onOpenChange, onSuccess }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="startTime">Hora de Inicio</Label>
+              <Label htmlFor="startTime">Hora de inicio</Label>
               <Input
                 id="startTime"
                 name="startTime"
@@ -132,75 +165,73 @@ export function AppointmentForm({ open, onOpenChange, onSuccess }) {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="endTime">Hora de Fin</Label>
-            <Input
-              id="endTime"
-              name="endTime"
-              type="time"
-              required
-              value={formData.endTime}
-              onChange={handleChange}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="endTime">Hora de fin</Label>
+              <Input
+                id="endTime"
+                name="endTime"
+                type="time"
+                required
+                value={formData.endTime}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reason">Motivo</Label>
+              <Input
+                id="reason"
+                name="reason"
+                required
+                value={formData.reason}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="patientId">Paciente</Label>
+              <Select
+                value={formData.patientId}
+                onValueChange={(value) => setFormData({ ...formData, patientId: value })}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar paciente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {patients.map((patient) => (
+                    <SelectItem key={patient.id} value={patient.id.toString()}>
+                      {patient.firstName} {patient.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="professionalId">Profesional</Label>
+              <Select
+                value={formData.professionalId}
+                onValueChange={(value) => setFormData({ ...formData, professionalId: value })}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar profesional" />
+                </SelectTrigger>
+                <SelectContent>
+                  {professionals.map((professional) => (
+                    <SelectItem key={professional.id} value={professional.id.toString()}>
+                      {professional.name} {professional.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="patientId">Paciente</Label>
-            <Select
-              value={formData.patientId.toString()}
-              onValueChange={(value) => {
-                console.log('Paciente seleccionado:', value);
-                setFormData(prev => ({ ...prev, patientId: parseInt(value) }));
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar paciente" />
-              </SelectTrigger>
-              <SelectContent>
-                {patients.map(patient => (
-                  <SelectItem key={patient.id} value={patient.id.toString()}>
-                    {patient.firstName} {patient.lastName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="professionalId">Profesional</Label>
-            <Select
-              value={formData.professionalId.toString()}
-              onValueChange={(value) => {
-                console.log('Profesional seleccionado:', value);
-                setFormData(prev => ({ ...prev, professionalId: parseInt(value) }));
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar profesional" />
-              </SelectTrigger>
-              <SelectContent>
-                {professionals.map(professional => (
-                  <SelectItem key={professional.id} value={professional.id.toString()}>
-                    {professional.name} {professional.lastName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="reason">Motivo de la Consulta</Label>
-            <Textarea
-              id="reason"
-              name="reason"
-              required
-              value={formData.reason}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas Adicionales</Label>
+            <Label htmlFor="notes">Notas adicionales</Label>
             <Textarea
               id="notes"
               name="notes"
@@ -210,11 +241,8 @@ export function AppointmentForm({ open, onOpenChange, onSuccess }) {
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Creando..." : "Crear Cita"}
+              {loading ? 'Procesando...' : appointment ? 'Reagendar' : 'Crear'}
             </Button>
           </DialogFooter>
         </form>

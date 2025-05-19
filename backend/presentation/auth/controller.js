@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { Users } from '../../database/connection.database.js';
+import { Users, Patients } from '../../database/connection.database.js';
 
 /**
  * @swagger
@@ -73,16 +73,24 @@ import { Users } from '../../database/connection.database.js';
  */
 const register = async (req, res) => {
   try {
-    const { username, password, name, lastName, phone, email, role } = req.body;
+    const { username, password, name, lastName, phone, email, role, dni } = req.body;
 
     // Validaciones simples
-    if (!username || !password || !email) {
+    if (!username || !password || !email || !dni) {
       return res.status(400).json({ message: 'Faltan campos obligatorios' });
     }
 
-    // Chequear si ya existe
-    const existe = await Users.findOne({ where: { username } });
-    if (existe) return res.status(400).json({ message: 'El usuario ya existe' });
+    // Chequear si ya existe el usuario
+    const existeUsuario = await Users.findOne({ where: { username } });
+    if (existeUsuario) return res.status(400).json({ message: 'El usuario ya existe' });
+
+    // Verificar si ya existe un paciente con ese DNI
+    const pacienteExistente = await Patients.findOne({ where: { dni } });
+    
+    // Si el paciente existe y ya tiene cuenta de usuario
+    if (pacienteExistente && pacienteExistente.hasUserAccount) {
+      return res.status(400).json({ message: 'Ya existe un usuario registrado con ese DNI' });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -93,10 +101,43 @@ const register = async (req, res) => {
       lastName,
       phone,
       email,
-      role: role || 'user'
+      role: role || 'patient'
     });
 
-    res.status(201).json({ message: 'Usuario registrado', user: nuevoUsuario });
+    // Si el usuario es un paciente
+    if (role === 'patient' || !role) {
+      try {
+        if (pacienteExistente) {
+          // Si el paciente ya existe, actualizamos sus datos y marcamos que tiene cuenta
+          await pacienteExistente.update({
+            firstName: name,
+            lastName: lastName,
+            phone: phone,
+            email: email,
+            hasUserAccount: true
+          });
+        } else {
+          // Si no existe, creamos un nuevo paciente
+          await Patients.create({
+            firstName: name,
+            lastName: lastName,
+            dni: dni,
+            phone: phone,
+            email: email,
+            hasUserAccount: true
+          });
+        }
+      } catch (error) {
+        console.error('Error al crear/actualizar paciente:', error);
+        // No retornamos error aquí para no afectar el registro del usuario
+      }
+    }
+
+    res.status(201).json({ 
+      message: 'Usuario registrado exitosamente', 
+      user: nuevoUsuario,
+      isExistingPatient: !!pacienteExistente
+    });
   } catch (error) {
     console.error('Error en register:', error);
     res.status(500).json({ message: 'Error al registrar usuario' });

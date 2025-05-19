@@ -4,7 +4,7 @@ export const userService = {
   // Obtener todos los pacientes
   getPatients: async () => {
     try {
-      const response = await api.get('/patients')
+      const response = await api.get('/users/patients')
       console.log('Respuesta de pacientes:', response.data)
       return response.data
     } catch (error) {

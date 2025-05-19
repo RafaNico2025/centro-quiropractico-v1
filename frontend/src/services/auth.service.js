@@ -11,9 +11,13 @@ const login = async (username, password) => {
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      console.log('Token guardado:', response.data.token);
+    } else {
+      console.error('No se recibió token en la respuesta');
     }
     return response.data.user;
   } catch (error) {
+    console.error('Error en login:', error);
     throw error.response?.data || { message: 'Error al iniciar sesión' };
   }
 };
@@ -30,6 +34,7 @@ const register = async (userData) => {
 const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  console.log('Sesión cerrada');
 };
 
 const getCurrentUser = () => {
@@ -41,11 +46,16 @@ const getCurrentUser = () => {
 };
 
 const getToken = () => {
-  return localStorage.getItem('token');
+  const token = localStorage.getItem('token');
+  if (!token) {
+    console.warn('No hay token disponible');
+  }
+  return token;
 };
 
 const isAuthenticated = () => {
-  return !!localStorage.getItem('token');
+  const token = localStorage.getItem('token');
+  return !!token;
 };
 
 export const authService = {

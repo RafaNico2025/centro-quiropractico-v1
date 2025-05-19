@@ -12,6 +12,7 @@ export default function Register() {
     lastName: '',
     email: '',
     phone: '',
+    dni: '',
     password: '',
     confirmPassword: '',
     role: 'patient'
@@ -60,6 +61,21 @@ export default function Register() {
                 id="username"
                 required
                 value={formData.username}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="dni" className="block text-sm font-medium text-gray-700">
+                DNI
+              </label>
+              <input
+                type="text"
+                name="dni"
+                id="dni"
+                required
+                value={formData.dni}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               />

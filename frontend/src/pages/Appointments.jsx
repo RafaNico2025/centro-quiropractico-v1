@@ -12,6 +12,7 @@ import { ArrowLeft } from 'lucide-react'
 export default function Appointments() {
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedAppointment, setSelectedAppointment] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const { toast } = useToast()
   const navigate = useNavigate()
@@ -37,12 +38,18 @@ export default function Appointments() {
 
   const handleStatusChange = async (appointmentId, newStatus) => {
     try {
-      await appointmentService.update(appointmentId, { status: newStatus })
-      await loadAppointments()
-      toast({
-        title: "Éxito",
-        description: "Estado de la cita actualizado correctamente"
-      })
+      if (newStatus === 'rescheduled') {
+        const appointment = appointments.find(a => a.id === appointmentId)
+        setSelectedAppointment(appointment)
+        setShowForm(true)
+      } else {
+        await appointmentService.update(appointmentId, { status: newStatus })
+        await loadAppointments()
+        toast({
+          title: "Éxito",
+          description: "Estado de la cita actualizado correctamente"
+        })
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -262,7 +269,11 @@ export default function Appointments() {
       <AppointmentForm 
         open={showForm} 
         onOpenChange={setShowForm} 
-        onSuccess={loadAppointments}
+        onSuccess={() => {
+          loadAppointments()
+          setSelectedAppointment(null)
+        }}
+        appointment={selectedAppointment}
       />
     </div>
   )

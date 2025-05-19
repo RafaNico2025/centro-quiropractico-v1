@@ -15,5 +15,6 @@ router.post('/', userController.createUser)
 router.put('/:id', userController.updateUser)
 router.delete('/:id', userController.deleteUser)
 router.post('/:id/change-password', userController.changePassword)
+router.post('/:id/reactivate', userController.reactivateUser)
 
 export default router

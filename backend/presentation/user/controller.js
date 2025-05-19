@@ -63,9 +63,13 @@ import { Op } from 'sequelize';
  */
 const getUsers = async (req, res) => {
   try {
+    const { includeInactive } = req.query;
+    const where = includeInactive ? {} : { isActive: true };
+
     const users = await Users.findAll({
-      attributes: { exclude: ['Password'] }, // Excluir la contraseña
-      order: [['Username', 'ASC']]
+      where,
+      attributes: { exclude: ['password'] },
+      order: [['username', 'ASC']]
     });
     res.json(users);
   } catch (error) {
@@ -285,24 +289,35 @@ const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await Users.findByPk(id);
-
+    
     if (!user) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    // No permitir eliminar el último administrador
-    if (user.Role === 'admin') {
-      const adminCount = await Users.count({ where: { Role: 'admin' } });
-      if (adminCount <= 1) {
-        return res.status(400).json({ message: 'No se puede eliminar el último administrador' });
+    // Si el usuario es un paciente, actualizar también el estado en la tabla Patients
+    if (user.role === 'patient') {
+      const patient = await Patients.findOne({
+        where: {
+          [Op.or]: [
+            { email: user.email },
+            { dni: user.username }
+          ]
+        }
+      });
+
+      if (patient) {
+        // En lugar de eliminar, marcamos como inactivo
+        await patient.update({ isActive: false });
       }
     }
 
-    await user.destroy();
-    res.json({ message: 'Usuario eliminado correctamente' });
+    // En lugar de eliminar el usuario, lo marcamos como inactivo
+    await user.update({ isActive: false });
+
+    res.json({ message: 'Usuario desactivado exitosamente' });
   } catch (error) {
-    console.error('Error al eliminar usuario:', error);
-    res.status(500).json({ message: 'Error al eliminar el usuario' });
+    console.error('Error al desactivar usuario:', error);
+    res.status(500).json({ message: 'Error al desactivar el usuario' });
   }
 };
 
@@ -468,12 +483,48 @@ const getPatients = async (req, res) => {
   }
 }
 
+// Agregar una función para reactivar usuarios
+const reactivateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await Users.findByPk(id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    // Si el usuario es un paciente, reactivar también en la tabla Patients
+    if (user.role === 'patient') {
+      const patient = await Patients.findOne({
+        where: {
+          [Op.or]: [
+            { email: user.email },
+            { dni: user.username }
+          ]
+        }
+      });
+
+      if (patient) {
+        await patient.update({ isActive: true });
+      }
+    }
+
+    await user.update({ isActive: true });
+
+    res.json({ message: 'Usuario reactivado exitosamente' });
+  } catch (error) {
+    console.error('Error al reactivar usuario:', error);
+    res.status(500).json({ message: 'Error al reactivar el usuario' });
+  }
+};
+
 export default {
   getUsers,
   getUserById,
   createUser,
   updateUser,
   deleteUser,
+  reactivateUser,
   changePassword,
   getProfessionals,
   getPatients

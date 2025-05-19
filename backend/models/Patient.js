@@ -50,6 +50,11 @@ const Patient = (sequelize) =>
     emergencyPhone: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    hasUserAccount: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false
     }
   },
   {
