@@ -1,6 +1,16 @@
 import api from './api';
 
 export const medicalHistoryService = {
+
+  // Obtener todos los historiales médicos
+  getAll: async () => {
+    try {
+      const response = await api.get('/medical-history');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
   // Obtener historial médico por ID
   getById: async (id) => {
     try {
