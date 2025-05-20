@@ -84,10 +84,13 @@ export function AppointmentForm({ open, onOpenChange, onSuccess, appointment }) 
       }
 
       if (appointment) {
-        await appointmentService.update(appointment.id, {
+        const newAppointment = await appointmentService.create({
           ...appointmentData,
-          status: 'rescheduled'
+          rescheduledFrom: appointment.id
         })
+        
+        await appointmentService.delete(appointment.id)
+        
         toast({
           title: "Éxito",
           description: "Cita reagendada correctamente"

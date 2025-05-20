@@ -42,6 +42,13 @@ export default function Appointments() {
         const appointment = appointments.find(a => a.id === appointmentId)
         setSelectedAppointment(appointment)
         setShowForm(true)
+      } else if (newStatus === 'cancelled') {
+        await appointmentService.delete(appointmentId)
+        await loadAppointments()
+        toast({
+          title: "Éxito",
+          description: "Cita cancelada correctamente"
+        })
       } else {
         await appointmentService.update(appointmentId, { status: newStatus })
         await loadAppointments()
@@ -89,7 +96,10 @@ export default function Appointments() {
   const formatDate = (dateString) => {
     if (!dateString) return '';
     try {
-      return format(new Date(dateString), 'PPP', { locale: es });
+      const date = new Date(dateString);
+      // Asegurarse de que la fecha se interprete correctamente
+      date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+      return format(date, 'PPP', { locale: es });
     } catch (error) {
       console.error('Error al formatear fecha:', error);
       return dateString;
