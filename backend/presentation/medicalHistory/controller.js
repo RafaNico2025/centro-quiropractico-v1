@@ -1,4 +1,5 @@
 import { MedicalHistories } from '../../database/connection.database.js';
+import { Patients } from '../../database/connection.database.js';
 
 /**
  * @swagger
@@ -8,7 +9,6 @@ import { MedicalHistories } from '../../database/connection.database.js';
  *       type: object
  *       required:
  *         - patientId
- *         - appointmentId
  *         - professionalId
  *       properties:
  *         patientId:
@@ -243,6 +243,46 @@ export const getPatientMedicalHistory = async (req, res) => {
       return res.status(404).json({ error: 'No se encontraron registros para el paciente' });
     }
     res.json(medicalHistory);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * @swagger
+ * /medical-history:
+ *   get:
+ *     summary: Obtener todos los registros de historial médico
+ *     tags: [Historial Médico]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de todos los registros de historial médico
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/MedicalHistory'
+ *       500:
+ *         description: Error del servidor
+ */
+export const getAllMedicalHistories = async (req, res) => {
+  try {
+    const histories = await MedicalHistories.findAll({
+      include: [
+        {
+          model: Patients,
+          as: 'Patient', // con mayúscula
+          attributes: ['id', 'firstName', 'lastName', 'dni']
+        }
+      ],
+
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.json(histories);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
