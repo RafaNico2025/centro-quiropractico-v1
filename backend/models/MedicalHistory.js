@@ -17,7 +17,7 @@ const MedicalHistory = (sequelize) =>
     },
     appointmentId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allworNull: true,
       references: {
         model: 'Appointments',
         key: 'id'
