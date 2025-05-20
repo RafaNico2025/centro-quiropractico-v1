@@ -12,6 +12,7 @@ import ClinicalRecords from './pages/ClinicalRecords'
 import Stats from './pages/Stats'
 import Accounting from './pages/Accounting'
 import Appointments from './pages/Appointments'
+import { Toaster } from './components/ui/toaster'
 
 export default function App() {
   return (
@@ -83,6 +84,7 @@ export default function App() {
             }
           />
         </Routes>
+        <Toaster />
       </Router>
     </AuthProvider>
   )

@@ -68,12 +68,8 @@ export default function Appointments() {
 
   const getTodayAppointments = () => {
     const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    return appointments.filter(appointment => {
-      const appointmentDate = new Date(appointment.date)
-      appointmentDate.setHours(0, 0, 0, 0)
-      return appointmentDate.getTime() === today.getTime()
-    })
+    const todayString = today.toISOString().split('T')[0] // Formato YYYY-MM-DD
+    return appointments.filter(appointment => appointment.date === todayString)
   }
 
   const getUpcomingAppointments = () => {

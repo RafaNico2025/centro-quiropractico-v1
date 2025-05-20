@@ -84,6 +84,18 @@ export function AppointmentForm({ open, onOpenChange, onSuccess, appointment }) 
       }
 
       if (appointment) {
+        if (appointment.date === formData.date && 
+            appointment.startTime === formData.startTime && 
+            appointment.endTime === formData.endTime) {
+          toast({
+            title: "Error",
+            description: "Para reagendar una cita debes cambiar el día o el horario",
+            variant: "destructive"
+          })
+          setLoading(false)
+          return
+        }
+
         const newAppointment = await appointmentService.create({
           ...appointmentData,
           rescheduledFrom: appointment.id
