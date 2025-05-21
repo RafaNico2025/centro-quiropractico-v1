@@ -8,6 +8,32 @@ import { es } from 'date-fns/locale'
 import { AppointmentForm } from '../components/AppointmentForm'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import { AppointmentCalendar } from '../components/AppointmentCalendar'
+
+// Componente para mostrar el estado del turno
+const StatusLabel = ({ status }) => {
+  const statusStyles = {
+    scheduled: 'bg-blue-100 text-blue-800',
+    completed: 'bg-green-100 text-green-800',
+    cancelled: 'bg-red-100 text-red-800',
+    no_show: 'bg-yellow-100 text-yellow-800',
+    rescheduled: 'bg-purple-100 text-purple-800'
+  }
+
+  const statusText = {
+    scheduled: 'Programado',
+    completed: 'Completado',
+    cancelled: 'Cancelado',
+    no_show: 'No Asistió',
+    rescheduled: 'Reagendado'
+  }
+
+  return (
+    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusStyles[status]}`}>
+      {statusText[status]}
+    </span>
+  )
+}
 
 export default function Appointments() {
   const [appointments, setAppointments] = useState([])
@@ -40,6 +66,13 @@ export default function Appointments() {
     try {
       if (newStatus === 'rescheduled') {
         const appointment = appointments.find(a => a.id === appointmentId)
+        await appointmentService.update(appointmentId, { status: newStatus })
+        const updatedAppointments = appointments.map(app => 
+          app.id === appointmentId 
+            ? { ...app, status: newStatus }
+            : app
+        )
+        setAppointments(updatedAppointments)
         setSelectedAppointment(appointment)
         setShowForm(true)
       } else if (newStatus === 'cancelled') {
@@ -58,6 +91,7 @@ export default function Appointments() {
         })
       }
     } catch (error) {
+      console.error('Error al actualizar estado:', error)
       toast({
         title: "Error",
         description: "No se pudo actualizar el estado de la cita",
@@ -68,7 +102,7 @@ export default function Appointments() {
 
   const getTodayAppointments = () => {
     const today = new Date()
-    const todayString = today.toISOString().split('T')[0] // Formato YYYY-MM-DD
+    const todayString = today.toISOString().split('T')[0]
     return appointments.filter(appointment => appointment.date === todayString)
   }
 
@@ -83,46 +117,27 @@ export default function Appointments() {
   }
 
   const formatTime = (timeString) => {
-    if (!timeString) return '';
-    // Asegurarse de que el tiempo tenga el formato correcto
-    const [hours, minutes] = timeString.split(':');
-    return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+    if (!timeString) return ''
+    const [hours, minutes] = timeString.split(':')
+    return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`
   }
 
   const formatDate = (dateString) => {
-    if (!dateString) return '';
+    if (!dateString) return ''
     try {
-      const date = new Date(dateString);
-      // Asegurarse de que la fecha se interprete correctamente
-      date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
-      return format(date, 'PPP', { locale: es });
+      const date = new Date(dateString)
+      date.setMinutes(date.getMinutes() + date.getTimezoneOffset())
+      return format(date, 'PPP', { locale: es })
     } catch (error) {
-      console.error('Error al formatear fecha:', error);
-      return dateString;
+      console.error('Error al formatear fecha:', error)
+      return dateString
     }
   }
 
-  // --- NUEVO: Cálculo del calendario del mes actual ---
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth(); // 0-indexed
-  const firstDayOfMonth = new Date(year, month, 1);
-  const lastDayOfMonth = new Date(year, month + 1, 0);
-  const daysInMonth = lastDayOfMonth.getDate();
-  // Día de la semana (0=domingo, 1=lunes, ..., 6=sábado)
-  let startDay = firstDayOfMonth.getDay();
-  // Ajustar para que el calendario empiece en lunes
-  startDay = startDay === 0 ? 6 : startDay - 1;
-  // Total de celdas a mostrar (días + vacíos)
-  const totalCells = Math.ceil((startDay + daysInMonth) / 7) * 7;
-  // --- FIN NUEVO ---
-
-  // Función para obtener la fecha en formato YYYY-MM-DD
-  const getYYYYMMDD = (year, month, day) => {
-    const mm = (month + 1).toString().padStart(2, '0');
-    const dd = day.toString().padStart(2, '0');
-    return `${year}-${mm}-${dd}`;
-  };
+  const handleSelectEvent = (event) => {
+    setSelectedAppointment(event.resource)
+    setShowForm(true)
+  }
 
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Cargando...</div>
@@ -155,7 +170,10 @@ export default function Appointments() {
               {getTodayAppointments().map((appointment) => (
                 <div key={appointment.id} className="flex items-center justify-between border-b pb-4">
                   <div>
-                    <p className="font-medium">{appointment.Patient?.firstName} {appointment.Patient?.lastName}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-medium">{appointment.Patient?.firstName} {appointment.Patient?.lastName}</p>
+                      <StatusLabel status={appointment.status} />
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       {formatTime(appointment.startTime)} - {appointment.reason}
                     </p>
@@ -168,6 +186,12 @@ export default function Appointments() {
                           onClick={() => handleStatusChange(appointment.id, 'completed')}
                         >
                           Completar
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => handleStatusChange(appointment.id, 'no_show')}
+                        >
+                          No Asistió
                         </Button>
                         <Button 
                           variant="outline" 
@@ -196,7 +220,10 @@ export default function Appointments() {
               {getUpcomingAppointments().map((appointment) => (
                 <div key={appointment.id} className="flex items-center justify-between border-b pb-4">
                   <div>
-                    <p className="font-medium">{appointment.Patient?.firstName} {appointment.Patient?.lastName}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-medium">{appointment.Patient?.firstName} {appointment.Patient?.lastName}</p>
+                      <StatusLabel status={appointment.status} />
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       {formatDate(appointment.date)} - {formatTime(appointment.startTime)}
                     </p>
@@ -232,53 +259,18 @@ export default function Appointments() {
             <CardTitle>Calendario de Citas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-7 gap-4">
-              {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day) => (
-                <div key={day} className="text-center font-medium">
-                  {day}
-                </div>
-              ))}
-              {Array.from({ length: totalCells }).map((_, index) => {
-                const dayNumber = index - startDay + 1;
-                const isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth;
-                let cellDateString = '';
-                if (isCurrentMonth) {
-                  cellDateString = getYYYYMMDD(year, month, dayNumber);
-                }
-                const dayAppointments = isCurrentMonth
-                  ? appointments.filter(appointment => appointment.date === cellDateString)
-                  : [];
-                return (
-                  <div
-                    key={index}
-                    className={`h-24 rounded-lg border p-2 hover:bg-accent flex flex-col ${!isCurrentMonth ? 'bg-muted text-muted-foreground' : ''}`}
-                  >
-                    <div className="text-sm font-medium">{isCurrentMonth ? dayNumber : ''}</div>
-                    <div className="mt-1 space-y-1 overflow-y-auto max-h-16 pr-1">
-                      {dayAppointments.map(appointment => (
-                        <div 
-                          key={appointment.id}
-                          className="rounded bg-primary/10 p-1 text-xs whitespace-nowrap overflow-hidden text-ellipsis"
-                        >
-                          {formatTime(appointment.startTime)} - {appointment.Patient?.firstName}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <AppointmentCalendar 
+              appointments={appointments}
+              onSelectEvent={handleSelectEvent}
+            />
           </CardContent>
         </Card>
       </div>
 
-      <AppointmentForm 
-        open={showForm} 
-        onOpenChange={setShowForm} 
-        onSuccess={() => {
-          loadAppointments()
-          setSelectedAppointment(null)
-        }}
+      <AppointmentForm
+        open={showForm}
+        onOpenChange={setShowForm}
+        onSuccess={loadAppointments}
         appointment={selectedAppointment}
       />
     </div>

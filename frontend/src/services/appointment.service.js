@@ -34,9 +34,12 @@ export const appointmentService = {
   // Actualizar una cita
   update: async (id, appointmentData) => {
     try {
+      console.log('Enviando actualización al servidor:', { id, appointmentData });
       const response = await api.put(`/appointments/${id}`, appointmentData);
+      console.log('Respuesta del servidor:', response.data);
       return response.data;
     } catch (error) {
+      console.error('Error en la actualización:', error.response?.data || error.message);
       throw error.response?.data || error.message;
     }
   },
