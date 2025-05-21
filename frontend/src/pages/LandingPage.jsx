@@ -94,10 +94,17 @@ const LandingPage = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-50 to-white py-20">
-        <div className="container mx-auto px-4">
+      <section className="relative bg-gradient-to-r from-blue-50 to-white py-20">
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="/backgrounds/2025-05-21_14-50.png" 
+            alt="Bienestar" 
+            className="w-full h-full object-cover opacity-50"
+          />
+        </div>
+        <div className="container mx-auto px-4 relative z-10">
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
+            <div className="bg-white/80 p-8 rounded-lg backdrop-blur-sm">
               <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
                 Tu Salud en Buenas Manos
               </h1>
@@ -114,13 +121,6 @@ const LandingPage = () => {
                 </Link>
               </div>
             </div>
-            <div className="hidden md:block">
-              <img 
-                src="/hero-image-logo.png" 
-                alt="Quiropráctico" 
-                className="rounded-lg shadow-xl"
-              />
-            </div>
           </div>
         </div>
       </section>
@@ -129,75 +129,71 @@ const LandingPage = () => {
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Nuestros Servicios</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="hover:shadow-lg transition-shadow">
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card className="hover:shadow-lg transition-shadow overflow-hidden">
+              <div className="relative h-48">
+                <img 
+                  src="/backgrounds/2025-05-21_14-52_1.png"
+                  alt="Cuidado Quiropráctico"
+                  className="w-full h-full object-cover"
+                />
+              </div>
               <CardHeader>
-                <CardTitle>Ajuste Quiropráctico</CardTitle>
+                <CardTitle>Cuidado Quiropráctico para todas las etapas de la vida</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">
-                  Técnicas especializadas para aliviar el dolor y mejorar la movilidad.
+                  Para restablecer las funciones del organismo y mejorar la calidad de vida.
                 </p>
                 <ul className="space-y-2 text-gray-600">
                   <li className="flex items-center">
                     <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
-                    Alivio del dolor
+                    Restablecimiento de funciones
                   </li>
                   <li className="flex items-center">
                     <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
-                    Mejora postural
+                    Mejora de calidad de vida
                   </li>
                 </ul>
               </CardContent>
             </Card>
-            <Card className="hover:shadow-lg transition-shadow">
+            <Card className="hover:shadow-lg transition-shadow overflow-hidden">
+              <div className="relative h-48">
+                <img 
+                  src="/backgrounds/2025-05-21_14-51.png"
+                  alt="Cuidado Deportivo"
+                  className="w-full h-full object-cover"
+                />
+              </div>
               <CardHeader>
-                <CardTitle>Terapia Manual</CardTitle>
+                <CardTitle>Cuidado Quiropráctico para deportistas</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">
-                  Tratamientos personalizados para recuperar la función muscular.
+                  Atención especializada para deportistas amateurs y profesionales.
                 </p>
                 <ul className="space-y-2 text-gray-600">
                   <li className="flex items-center">
                     <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
-                    Recuperación muscular
+                    Maximización del rendimiento deportivo
                   </li>
                   <li className="flex items-center">
                     <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
-                    Técnicas especializadas
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle>Rehabilitación</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">
-                  Programas de recuperación para lesiones y condiciones crónicas.
-                </p>
-                <ul className="space-y-2 text-gray-600">
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Plan personalizado
+                    Mejor recuperación post entrenamiento
                   </li>
                   <li className="flex items-center">
                     <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
-                    Seguimiento continuo
+                    Optimización del rendimiento en competencias
                   </li>
                 </ul>
               </CardContent>
@@ -239,10 +235,18 @@ const LandingPage = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-blue-600 text-white py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-6">¿Listo para Mejorar tu Salud?</h2>
-          <p className="text-xl mb-8">
+      <section className="relative py-16">
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="/backgrounds/2025-05-21_14-51_1.png"
+            alt="Tratamiento quiropráctico"
+            className="w-full h-full object-cover opacity-30"
+          />
+          <div className="absolute inset-0 bg-blue-600/70"></div>
+        </div>
+        <div className="container mx-auto px-4 relative z-10 text-center">
+          <h2 className="text-3xl font-bold mb-6 text-white">¿Listo para Mejorar tu Salud?</h2>
+          <p className="text-xl mb-8 text-white">
             Agenda una cita hoy mismo y comienza tu camino hacia una vida más saludable.
             Nuestros especialistas están listos para ayudarte.
           </p>
