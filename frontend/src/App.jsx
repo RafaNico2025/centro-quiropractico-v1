@@ -12,6 +12,9 @@ import ClinicalRecords from './pages/ClinicalRecords'
 import Stats from './pages/Stats'
 import Accounting from './pages/Accounting'
 import Appointments from './pages/Appointments'
+import About from './pages/About'
+import Services from './pages/Services'
+import Contact from './pages/Contact'
 import { Toaster } from './components/ui/toaster'
 
 export default function App() {
@@ -23,6 +26,9 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/nosotros" element={<About />} />
+          <Route path="/servicios" element={<Services />} />
+          <Route path="/contacto" element={<Contact />} />
 
           {/* Rutas protegidas para pacientes */}
           <Route
