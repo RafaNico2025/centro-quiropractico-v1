@@ -45,7 +45,7 @@ const LandingPage = () => {
               <Link to="/" className="text-gray-600 hover:text-blue-600">Inicio</Link>
               <Link to="/nosotros" className="text-gray-600 hover:text-blue-600">Nosotros</Link>
               <Link to="/servicios" className="text-gray-600 hover:text-blue-600">Servicios</Link>
-              <Link to="/blog" className="text-gray-600 hover:text-blue-600">Blog</Link>
+              {/* <Link to="/blog" className="text-gray-600 hover:text-blue-600">Blog</Link> */}
               <Link to="/contacto" className="text-gray-600 hover:text-blue-600">Contacto</Link>
             </nav>
 
@@ -77,7 +77,7 @@ const LandingPage = () => {
                 <Link to="/" className="text-gray-600 hover:text-blue-600">Inicio</Link>
                 <Link to="/nosotros" className="text-gray-600 hover:text-blue-600">Nosotros</Link>
                 <Link to="/servicios" className="text-gray-600 hover:text-blue-600">Servicios</Link>
-                <Link to="/blog" className="text-gray-600 hover:text-blue-600">Blog</Link>
+                {/* <Link to="/blog" className="text-gray-600 hover:text-blue-600">Blog</Link> */}
                 <Link to="/contacto" className="text-gray-600 hover:text-blue-600">Contacto</Link>
                 <div className="flex flex-col space-y-2 pt-4">
                   <Link to="/login">
@@ -203,7 +203,7 @@ const LandingPage = () => {
       </section>
 
       {/* Paquetes - Nueva sección */}
-      <section className="py-16">
+      {/* <section className="py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Nuestros Paquetes</h2>
           <div className="grid md:grid-cols-3 gap-8">
@@ -232,7 +232,7 @@ const LandingPage = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="relative py-16">
@@ -255,7 +255,7 @@ const LandingPage = () => {
               <Button size="lg" variant="secondary">Comenzar Ahora</Button>
             </Link>
             <a 
-              href="https://wa.me/5491234567890" 
+              href="https://wa.me/5493516171562" 
               target="_blank" 
               rel="noopener noreferrer"
             >
@@ -382,7 +382,7 @@ const LandingPage = () => {
 
       {/* Botón flotante de WhatsApp */}
       <a
-        href="https://wa.me/5491234567890"
+        href="https://wa.me/5493516171562"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-colors duration-300 z-50"

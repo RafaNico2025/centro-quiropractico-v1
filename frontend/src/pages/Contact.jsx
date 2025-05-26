@@ -27,7 +27,7 @@ const Contact = () => {
               <Link to="/" className="text-gray-600 hover:text-blue-600">Inicio</Link>
               <Link to="/nosotros" className="text-gray-600 hover:text-blue-600">Nosotros</Link>
               <Link to="/servicios" className="text-gray-600 hover:text-blue-600">Servicios</Link>
-              <Link to="/blog" className="text-gray-600 hover:text-blue-600">Blog</Link>
+              {/* <Link to="/blog" className="text-gray-600 hover:text-blue-600">Blog</Link> */}
               <Link to="/contacto" className="text-gray-600 hover:text-blue-600">Contacto</Link>
             </nav>
 
@@ -59,7 +59,7 @@ const Contact = () => {
                 <Link to="/" className="text-gray-600 hover:text-blue-600">Inicio</Link>
                 <Link to="/nosotros" className="text-gray-600 hover:text-blue-600">Nosotros</Link>
                 <Link to="/servicios" className="text-gray-600 hover:text-blue-600">Servicios</Link>
-                <Link to="/blog" className="text-gray-600 hover:text-blue-600">Blog</Link>
+                {/* <Link to="/blog" className="text-gray-600 hover:text-blue-600">Blog</Link> */}
                 <Link to="/contacto" className="text-gray-600 hover:text-blue-600">Contacto</Link>
                 <div className="flex flex-col space-y-2 pt-4">
                   <Link to="/login">
