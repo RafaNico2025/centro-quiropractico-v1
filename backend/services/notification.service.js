@@ -482,7 +482,7 @@ ${reason ? `📝 Motivo: ${reason}` : ''}
 // Función para enviar solicitud de cita desde dashboard del paciente
 export const sendAppointmentRequest = async (appointmentRequest) => {
   try {
-    const { motivo, preferenciaDia, preferenciaHora, notas, solicitadoPor, emailSolicitante } = appointmentRequest;
+    const { motivo, preferenciaDia, preferenciaHora, notas, solicitadoPor, emailSolicitante, telefonoSolicitante } = appointmentRequest;
     
     // Template de email para el centro quiropráctico
     const emailTemplate = {
@@ -524,6 +524,7 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
               <h3>👤 Información del Solicitante:</h3>
               <p><strong>Nombre:</strong> ${solicitadoPor}</p>
               <p><strong>Email:</strong> ${emailSolicitante}</p>
+              <p><strong>Teléfono:</strong> ${telefonoSolicitante}</p>
               <p><strong>Fecha de solicitud:</strong> ${new Date().toLocaleString('es-ES')}</p>
             </div>
             
@@ -561,6 +562,7 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
 
             <div style="text-align: center; margin: 20px 0;">
               <a href="mailto:${emailSolicitante}?subject=Re: Solicitud de Cita&body=Estimado/a ${solicitadoPor},%0A%0AGracias por su solicitud de cita. Nos pondremos en contacto con usted para confirmar la fecha y hora.%0A%0ASaludos,%0ACentro Quiropráctico" class="btn">✉️ Responder por Email</a>
+              <a href="tel:${telefonoSolicitante}" class="btn" style="background: #28a745;">📞 Llamar al Paciente</a>
             </div>
           </div>
 

@@ -597,7 +597,7 @@ const requestAppointment = async (req, res) => {
 
     // Obtener datos del usuario que solicita la cita
     const user = await Users.findByPk(userId, {
-      attributes: ['id', 'name', 'lastName', 'email']
+      attributes: ['id', 'name', 'lastName', 'email', 'phone']
     });
 
     if (!user) {
@@ -611,7 +611,8 @@ const requestAppointment = async (req, res) => {
       preferenciaHora,
       notas: notas || '',
       solicitadoPor: `${user.name} ${user.lastName}`,
-      emailSolicitante: user.email
+      emailSolicitante: user.email,
+      telefonoSolicitante: user.phone
     };
 
     // Enviar notificación por email al centro quiropráctico
