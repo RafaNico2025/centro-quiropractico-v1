@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { useNavigate } from 'react-router-dom'
@@ -7,17 +7,32 @@ import { useAuth } from '../context/AuthContext'
 const Dashboard = () => {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const [prices, setPrices] = useState({
-    consultaInicial: 2500,
-    consultaSeguimiento: 2000,
-    tratamiento: 3000,
-    masaje: 1800
-  })
+
+  // Leer precios del localStorage o usar valores por defecto
+  const getInitialPrices = () => {
+    const saved = localStorage.getItem('servicePrices')
+    if (saved) {
+      try {
+        return JSON.parse(saved)
+      } catch {
+        return { consultaInicial: 18000, consultaSeguimiento: 16000 }
+      }
+    }
+    return { consultaInicial: 18000, consultaSeguimiento: 16000 }
+  }
+
+  const [prices, setPrices] = useState(getInitialPrices)
+
+  // Guardar precios en localStorage
+  const handleSavePrices = () => {
+    localStorage.setItem('servicePrices', JSON.stringify(prices))
+    alert('Precios guardados correctamente')
+  }
 
   const handlePriceChange = (service, value) => {
     setPrices(prev => ({
       ...prev,
-      [service]: value
+      [service]: Number(value)
     }))
   }
 
@@ -127,25 +142,8 @@ const Dashboard = () => {
                     className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tratamiento</label>
-                  <input
-                    type="number"
-                    value={prices.tratamiento}
-                    onChange={(e) => handlePriceChange('tratamiento', e.target.value)}
-                    className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Masaje</label>
-                  <input
-                    type="number"
-                    value={prices.masaje}
-                    onChange={(e) => handlePriceChange('masaje', e.target.value)}
-                    className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <Button className="w-full mt-2">Guardar Precios</Button>
+
+                <Button className="w-full mt-2" onClick={handleSavePrices}>Guardar Precios</Button>
               </div>
             </CardContent>
           </Card>
@@ -168,4 +166,4 @@ const Dashboard = () => {
   )
 }
 
-export default Dashboard 
+export default Dashboard
