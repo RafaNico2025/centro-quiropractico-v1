@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "jest"
+    "test": "jest",
+    "test:notifications": "node test-notifications.js"
   },
   "keywords": [],
   "author": "",

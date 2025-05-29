@@ -52,5 +52,15 @@ export const appointmentService = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  // Enviar recordatorio manual
+  sendReminder: async (id) => {
+    try {
+      const response = await api.post(`/appointments/${id}/send-reminder`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   }
 }; 

@@ -1,6 +1,6 @@
 import { Appointments, Patients, Users } from '../../database/connection.database.js';
 import { Op } from 'sequelize';
-import { sendAppointmentNotification } from '../../services/notification.service.js';
+import { sendAppointmentNotification, sendAppointmentCancellation, sendAppointmentReminder } from '../../services/notification.service.js';
 
 /**
  * @swagger
@@ -113,10 +113,25 @@ const createAppointment = async (req, res) => {
       status: 'scheduled'
     });
 
-    const patient = await Patients.findByPk(patientId);
+    // Obtener datos del paciente y profesional para las notificaciones
+    const [patient, professional] = await Promise.all([
+      Patients.findByPk(patientId, {
+        attributes: ['id', 'firstName', 'lastName', 'phone', 'email']
+      }),
+      Users.findByPk(professionalId, {
+        attributes: ['id', 'name', 'lastName', 'email']
+      })
+    ]);
 
-    // Enviar notificaciones
-    await sendAppointmentNotification(appointment, patient);
+    // Enviar notificaciones con todos los datos
+    const notificationResults = await sendAppointmentNotification(appointment, patient, professional);
+    
+    console.log('📧 Resultados de notificación:', notificationResults);
+
+    // Actualizar el flag de notificación enviada
+    await appointment.update({ 
+      notificationSent: notificationResults.email?.success || notificationResults.whatsapp?.success 
+    });
 
     res.status(201).json(appointment);
   } catch (error) {
@@ -325,13 +340,17 @@ const updateAppointment = async (req, res) => {
       notes,
       patientId,
       professionalId,
-      status
+      status,
+      cancellationReason
     } = req.body;
 
     const appointment = await Appointments.findByPk(id);
     if (!appointment) {
       return res.status(404).json({ message: 'Cita no encontrada' });
     }
+
+    // Guardar el estado anterior para detectar cambios
+    const previousStatus = appointment.status;
 
     // Verificar disponibilidad del nuevo horario si se está cambiando
     if (date || startTime || endTime || professionalId) {
@@ -365,6 +384,7 @@ const updateAppointment = async (req, res) => {
       }
     }
 
+    // Actualizar la cita
     await appointment.update({
       date,
       startTime,
@@ -373,8 +393,39 @@ const updateAppointment = async (req, res) => {
       notes,
       patientId,
       professionalId,
-      status
+      status,
+      cancellationReason: status === 'cancelled' ? cancellationReason : appointment.cancellationReason,
+      updatedBy: req.user.id
     });
+
+    // Enviar notificación de cancelación si el estado cambió a cancelado
+    if (status === 'cancelled' && previousStatus !== 'cancelled') {
+      try {
+        // Obtener datos del paciente y profesional para las notificaciones
+        const [patient, professional] = await Promise.all([
+          Patients.findByPk(appointment.patientId, {
+            attributes: ['id', 'firstName', 'lastName', 'phone', 'email']
+          }),
+          Users.findByPk(appointment.professionalId, {
+            attributes: ['id', 'name', 'lastName', 'email']
+          })
+        ]);
+
+        if (patient) {
+          const notificationResults = await sendAppointmentCancellation(
+            appointment, 
+            patient, 
+            professional,
+            cancellationReason || 'No se especificó motivo'
+          );
+          
+          console.log('📧 Notificación de cancelación enviada:', notificationResults);
+        }
+      } catch (notificationError) {
+        console.error('❌ Error al enviar notificación de cancelación:', notificationError);
+        // No fallar la actualización por errores en notificaciones
+      }
+    }
 
     res.json(appointment);
   } catch (error) {
@@ -421,10 +472,90 @@ const deleteAppointment = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /appointments/{id}/send-reminder:
+ *   post:
+ *     summary: Enviar recordatorio manual de cita
+ *     tags: [Citas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la cita
+ *     responses:
+ *       200:
+ *         description: Recordatorio enviado exitosamente
+ *       404:
+ *         description: Cita no encontrada
+ *       500:
+ *         description: Error del servidor
+ */
+const sendAppointmentReminderManual = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Buscar la cita con paciente y profesional
+    const appointment = await Appointments.findByPk(id, {
+      include: [
+        { 
+          model: Patients, 
+          attributes: ['id', 'firstName', 'lastName', 'phone', 'email'],
+          required: true
+        },
+        { 
+          model: Users, 
+          as: 'professional',
+          attributes: ['id', 'name', 'lastName', 'email'],
+          required: true
+        }
+      ]
+    });
+
+    if (!appointment) {
+      return res.status(404).json({ message: 'Cita no encontrada' });
+    }
+
+    // Verificar que la cita no esté cancelada
+    if (appointment.status === 'cancelled') {
+      return res.status(400).json({ message: 'No se puede enviar recordatorio de una cita cancelada' });
+    }
+
+    // Enviar recordatorio
+    const notificationResults = await sendAppointmentReminder(
+      appointment, 
+      appointment.Patient, 
+      appointment.professional
+    );
+
+    // Actualizar flag de recordatorio enviado
+    await appointment.update({ 
+      reminderSent: notificationResults.email?.success || notificationResults.whatsapp?.success,
+      reminderSent24h: true // Marcar como enviado manualmente
+    });
+
+    console.log('📧 Recordatorio manual enviado:', notificationResults);
+
+    res.json({
+      message: 'Recordatorio enviado exitosamente',
+      results: notificationResults
+    });
+
+  } catch (error) {
+    console.error('Error al enviar recordatorio:', error);
+    res.status(500).json({ message: 'Error al enviar recordatorio' });
+  }
+};
+
 export {
   createAppointment,
   getAppointments,
   getAppointmentById,
   updateAppointment,
-  deleteAppointment
+  deleteAppointment,
+  sendAppointmentReminderManual
 }; 

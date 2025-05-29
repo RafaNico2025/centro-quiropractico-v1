@@ -109,7 +109,14 @@ export default function Appointments() {
         setSelectedAppointment(appointment)
         setShowForm(true)
       } else if (newStatus === 'cancelled') {
-        await appointmentService.delete(appointmentId)
+        // Pedir motivo de cancelación
+        const cancellationReason = window.prompt('Motivo de cancelación (opcional):') || 'No especificado';
+        
+        // Actualizar estado a cancelled (NO eliminar) para que se envíe el email
+        await appointmentService.update(appointmentId, { 
+          status: 'cancelled',
+          cancellationReason: cancellationReason 
+        })
         await loadAppointments()
       } else {
         await appointmentService.update(appointmentId, { status: newStatus })
@@ -127,6 +134,44 @@ export default function Appointments() {
       toast({
         title: "❌ Error",
         description: "No se pudo actualizar el estado de la cita. Intenta nuevamente.",
+        variant: "destructive",
+        duration: 5000
+      })
+    }
+  }
+
+  const handleSendReminder = async (appointmentId) => {
+    try {
+      const appointment = appointments.find(a => a.id === appointmentId)
+      const patientName = `${appointment.Patient?.firstName} ${appointment.Patient?.lastName}`
+      
+      // Confirmación antes de enviar
+      if (!window.confirm(`¿Enviar recordatorio por email a ${patientName}?`)) {
+        return
+      }
+
+      // Mostrar loading
+      toast({
+        title: "📧 Enviando recordatorio...",
+        description: `Enviando notificación a ${patientName}`,
+        duration: 2000
+      })
+
+      const result = await appointmentService.sendReminder(appointmentId)
+      
+      toast({
+        title: "✅ Recordatorio enviado",
+        description: `Email enviado exitosamente a ${patientName}`,
+        duration: 4000
+      })
+
+      console.log('Recordatorio enviado:', result)
+      
+    } catch (error) {
+      console.error('Error al enviar recordatorio:', error)
+      toast({
+        title: "❌ Error",
+        description: "No se pudo enviar el recordatorio. Verifica la configuración de email.",
         variant: "destructive",
         duration: 5000
       })
@@ -359,6 +404,14 @@ export default function Appointments() {
                           onClick={() => handleStatusChange(appointment.id, 'rescheduled')}
                         >
                           📅 Reagendar
+                        </Button>
+                        <Button 
+                          size="sm"
+                          variant="outline" 
+                          className="border-purple-500 text-purple-700 hover:bg-purple-50"
+                          onClick={() => handleSendReminder(appointment.id)}
+                        >
+                          📧 Recordatorio
                         </Button>
                         <Button 
                           size="sm"
