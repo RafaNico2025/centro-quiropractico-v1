@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { sendEmailNotification, sendAppointmentNotification } from './services/notification.service.js';
+import { sendEmailNotification, sendAppointmentNotification } from '../services/notification.service.js';
 
 console.log('🧪 Iniciando prueba del sistema de notificaciones...\n');
 
