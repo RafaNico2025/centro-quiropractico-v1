@@ -366,15 +366,46 @@ export default function Stats() {
                 {isLoading ? (
                   <div className="h-[200px] bg-gray-200 animate-pulse rounded"></div>
                 ) : (
-                  <div className="space-y-2">
-                    {patientStats?.masActivos?.slice(0, 5).map((patient, index) => (
-                      <div key={index} className="flex justify-between items-center">
-                        <span className="text-sm">
-                          {patient.firstName} {patient.lastName}
-                        </span>
-                        <span className="font-bold">{patient.totalCitas} citas</span>
+                  <div className="space-y-3">
+                    {patientStats?.masActivos?.length > 0 ? (
+                      <>
+                        <div className="space-y-2">
+                          {patientStats.masActivos.slice(0, 5).map((patient, index) => (
+                            <div key={index} className="flex justify-between items-center p-2 rounded-lg bg-gray-50">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                  {index + 1}
+                                </div>
+                                <span className="text-sm font-medium">
+                                  {patient.firstName} {patient.lastName}
+                                </span>
+                              </div>
+                              <span className="font-bold text-blue-600">{patient.totalCitas} citas</span>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {patientStats.masActivos.length < 5 && (
+                          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <span className="text-blue-600">📊</span>
+                              <p className="text-sm text-blue-700">
+                                <strong>Dataset pequeño:</strong> 
+                                {patientStats.masActivos.length === 1 ? ' Solo 1 paciente activo' : 
+                                 ` ${patientStats.masActivos.length} pacientes activos`} 
+                                 {' '}en este período. Las métricas reflejan esta muestra.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-8">
+                        <div className="text-4xl mb-2">👥</div>
+                        <p className="text-muted-foreground mb-2">No hay pacientes con citas en este período</p>
+                        <p className="text-sm text-blue-600">Prueba seleccionar un rango de fechas más amplio</p>
                       </div>
-                    )) || <p className="text-muted-foreground">No hay datos disponibles</p>}
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -382,28 +413,128 @@ export default function Stats() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Crecimiento de Pacientes</CardTitle>
+                <CardTitle>Análisis de Pacientes</CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
                   <div className="h-[200px] bg-gray-200 animate-pulse rounded"></div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     <div className="text-center">
                       <div className="text-3xl font-bold text-blue-600">
                         {patientStats?.total || 0}
                       </div>
-                      <p className="text-sm text-muted-foreground">Total de pacientes</p>
+                      <p className="text-sm text-muted-foreground">Total de pacientes registrados</p>
                     </div>
-                    <div className="mt-4">
-                      <p className="text-sm text-muted-foreground">Nuevos por mes (últimos 6)</p>
-                      {patientStats?.nuevosPorMes?.slice(-6).map((stat, index) => (
-                        <div key={index} className="flex justify-between items-center">
-                          <span className="text-sm">{stat.mes}</span>
-                          <span className="font-bold">{stat.nuevos}</span>
+                    
+                    {/* Métricas del período */}
+                    <div className="space-y-3 border-t pt-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Con citas en período:</span>
+                        <span className="font-bold">{patientStats?.masActivos?.length || 0}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Pacientes nuevos:</span>
+                        <span className="font-bold text-green-600">
+                          {generalStats?.pacientes?.nuevos || 0}
+                        </span>
+                      </div>
+                      
+                      {patientStats?.masActivos?.length > 0 && (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Promedio citas/paciente:</span>
+                            <span className="font-bold">
+                              {Math.round((generalStats?.citas?.total || 0) / patientStats.masActivos.length * 10) / 10}
+                            </span>
+                          </div>
+                          
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Paciente más activo:</span>
+                            <span className="font-bold text-blue-600">
+                              {Math.max(...patientStats.masActivos.map(p => p.totalCitas))} citas
+                            </span>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Métricas adicionales útiles */}
+                      {generalStats?.citas && (
+                        <>
+                          <div className="border-t pt-3 mt-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-muted-foreground">Tasa de retención:</span>
+                              <span className="font-bold text-purple-600">
+                                {patientStats?.masActivos?.length > 0 ? 
+                                  Math.round(((patientStats.masActivos.filter(p => p.totalCitas > 1).length) / patientStats.masActivos.length) * 100) : 0}%
+                              </span>
+                            </div>
+                            
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-muted-foreground">Citas completadas:</span>
+                              <span className="font-bold text-green-600">
+                                {generalStats.citas.completadas || 0}
+                              </span>
+                            </div>
+                            
+                            {generalStats.citas.total > 0 && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">Eficiencia de citas:</span>
+                                <span className="font-bold">
+                                  {Math.round((generalStats.citas.completadas / generalStats.citas.total) * 100)}%
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Crecimiento histórico (solo si hay datos) */}
+                    {patientStats?.nuevosPorMes?.length > 0 && (
+                      <div className="border-t pt-4">
+                        <p className="text-sm text-muted-foreground mb-2">Tendencia de nuevos pacientes:</p>
+                        <div className="space-y-1">
+                          {patientStats.nuevosPorMes.slice(-3).map((stat, index) => {
+                            const isCurrentMonth = index === patientStats.nuevosPorMes.slice(-3).length - 1;
+                            return (
+                              <div key={index} className={`flex justify-between items-center text-sm p-2 rounded ${isCurrentMonth ? 'bg-green-50' : ''}`}>
+                                <span className={isCurrentMonth ? 'font-medium' : ''}>{stat.mes}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className={`font-bold ${isCurrentMonth ? 'text-green-600' : ''}`}>
+                                    {stat.nuevos} nuevos
+                                  </span>
+                                  {isCurrentMonth && (
+                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">actual</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      )) || <p className="text-muted-foreground">No hay datos disponibles</p>}
-                    </div>
+                      </div>
+                    )}
+
+                    {/* Insights útiles en lugar de sugerencias genéricas */}
+                    {patientStats?.masActivos?.length > 0 && (
+                      <div className="border-t pt-4">
+                        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                          <h4 className="text-sm font-medium text-indigo-900 mb-2">📈 Insights del período:</h4>
+                          <div className="text-xs text-indigo-700 space-y-1">
+                            {patientStats.masActivos.filter(p => p.totalCitas > 1).length > 0 && (
+                              <div>• {patientStats.masActivos.filter(p => p.totalCitas > 1).length} pacientes regresaron múltiples veces</div>
+                            )}
+                            {generalStats?.pacientes?.nuevos > 0 && (
+                              <div>• {generalStats.pacientes.nuevos} pacientes nuevos captados en este período</div>
+                            )}
+                            {generalStats?.citas?.completadas > 0 && generalStats?.citas?.total > 0 && (
+                              <div>• {Math.round((generalStats.citas.completadas / generalStats.citas.total) * 100)}% de las citas fueron completadas exitosamente</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -425,9 +556,17 @@ export default function Stats() {
                     <div className="text-3xl font-bold">
                       ${generalStats?.finanzas?.ingresosTotales?.toLocaleString() || 0}
                     </div>
-                    <Progress value={75} className="h-2" />
+                    <Progress 
+                      value={generalStats?.finanzas?.ingresosTotales > 0 ? 
+                        Math.min((generalStats.finanzas.ingresosTotales / 100000) * 100, 100) : 0
+                      } 
+                      className="h-2" 
+                    />
                     <p className="text-sm text-muted-foreground">
-                      Ingresos totales del período
+                      {generalStats?.finanzas?.ingresosTotales > 0 ? 
+                        'Ingresos totales del período' : 
+                        'No hay ingresos en el período seleccionado'
+                      }
                     </p>
                   </div>
                 )}
@@ -446,9 +585,17 @@ export default function Stats() {
                     <div className="text-3xl font-bold">
                       ${generalStats?.finanzas?.promedioPorCita?.toLocaleString() || 0}
                     </div>
-                    <Progress value={85} className="h-2" />
+                    <Progress 
+                      value={generalStats?.finanzas?.promedioPorCita > 0 ? 
+                        Math.min((generalStats.finanzas.promedioPorCita / 10000) * 100, 100) : 0
+                      } 
+                      className="h-2" 
+                    />
                     <p className="text-sm text-muted-foreground">
-                      Basado en {generalStats?.citas?.completadas || 0} citas completadas
+                      {generalStats?.citas?.completadas > 0 ? 
+                        `Basado en ${generalStats.citas.completadas} citas completadas` :
+                        'No hay citas completadas en el período'
+                      }
                     </p>
                   </div>
                 )}
