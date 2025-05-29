@@ -92,7 +92,13 @@ export default function Accounting() {
                         {/* paciente relacionado */}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Fecha: {new Date(income.date).toLocaleDateString()} |
+                        Fecha: {
+                          (() => {
+                            const d = new Date(income.date);
+                            d.setDate(d.getDate() + 1);
+                            return d.toLocaleDateString();
+                          })()
+                        } |
                         Tipo: {income.category || "N/A"}
                       </p>
                     </div>
