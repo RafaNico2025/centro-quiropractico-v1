@@ -62,5 +62,15 @@ export const appointmentService = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  // Solicitar cita desde dashboard del paciente
+  requestAppointment: async (appointmentRequestData) => {
+    try {
+      const response = await api.post('/appointments/request', appointmentRequestData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   }
 }; 

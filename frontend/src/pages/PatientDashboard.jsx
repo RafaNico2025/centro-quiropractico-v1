@@ -111,12 +111,59 @@ const PatientDashboard = () => {
     }
   }, [userData]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Aquí iría la lógica para enviar el formulario por email
-    console.log("Solicitud de cita:", appointmentRequest);
-    setShowAppointmentForm(false);
-    // Mostrar mensaje de éxito
+    
+    try {
+      // Validar que todos los campos requeridos estén completos
+      if (!appointmentRequest.motivo.trim() || !appointmentRequest.preferenciaDia.trim() || !appointmentRequest.preferenciaHora.trim()) {
+        toast({
+          title: "Error",
+          description: "Por favor completa todos los campos obligatorios",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Mostrar toast de carga
+      const loadingToast = toast({
+        title: "Enviando solicitud...",
+        description: "Por favor espera mientras procesamos tu solicitud",
+        duration: 3000,
+      });
+
+      // Enviar solicitud usando el servicio
+      const response = await appointmentService.requestAppointment(appointmentRequest);
+      
+      // Cerrar formulario
+      setShowAppointmentForm(false);
+      
+      // Limpiar formulario
+      setAppointmentRequest({
+        motivo: "",
+        preferenciaDia: "",
+        preferenciaHora: "",
+        notas: "",
+      });
+
+      // Mostrar mensaje de éxito
+      toast({
+        title: "¡Solicitud enviada exitosamente!",
+        description: response.message || "Nos pondremos en contacto contigo pronto para confirmar tu cita.",
+        duration: 5000,
+      });
+
+    } catch (error) {
+      console.error("Error al enviar solicitud:", error);
+      
+      // Mostrar mensaje de error
+      toast({
+        title: "Error al enviar solicitud",
+        description: error.error || error.message || "Hubo un problema al enviar tu solicitud. Por favor intenta de nuevo o contacta por WhatsApp.",
+        variant: "destructive",
+        duration: 8000,
+      });
+    }
   };
 
   const handleChange = (e) => {

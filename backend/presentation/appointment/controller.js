@@ -1,6 +1,6 @@
 import { Appointments, Patients, Users } from '../../database/connection.database.js';
 import { Op } from 'sequelize';
-import { sendAppointmentNotification, sendAppointmentCancellation, sendAppointmentReminder } from '../../services/notification.service.js';
+import { sendAppointmentNotification, sendAppointmentCancellation, sendAppointmentReminder, sendAppointmentRequest } from '../../services/notification.service.js';
 
 /**
  * @swagger
@@ -551,11 +551,96 @@ const sendAppointmentReminderManual = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /appointments/request:
+ *   post:
+ *     summary: Solicitar una cita desde el dashboard del paciente
+ *     tags: [Citas]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - motivo
+ *               - preferenciaDia
+ *               - preferenciaHora
+ *             properties:
+ *               motivo:
+ *                 type: string
+ *                 description: Motivo de la consulta
+ *               preferenciaDia:
+ *                 type: string
+ *                 description: Preferencia de día para la cita
+ *               preferenciaHora:
+ *                 type: string
+ *                 description: Preferencia de hora para la cita
+ *               notas:
+ *                 type: string
+ *                 description: Notas adicionales
+ *     responses:
+ *       200:
+ *         description: Solicitud de cita enviada exitosamente
+ *       400:
+ *         description: Error en la solicitud
+ *       500:
+ *         description: Error del servidor
+ */
+const requestAppointment = async (req, res) => {
+  try {
+    const { motivo, preferenciaDia, preferenciaHora, notas } = req.body;
+    const userId = req.user.id;
+
+    // Obtener datos del usuario que solicita la cita
+    const user = await Users.findByPk(userId, {
+      attributes: ['id', 'name', 'lastName', 'email']
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Crear el objeto de solicitud de cita
+    const appointmentRequest = {
+      motivo,
+      preferenciaDia,
+      preferenciaHora,
+      notas: notas || '',
+      solicitadoPor: `${user.name} ${user.lastName}`,
+      emailSolicitante: user.email
+    };
+
+    // Enviar notificación por email al centro quiropráctico
+    const notificationResult = await sendAppointmentRequest(appointmentRequest);
+
+    if (notificationResult.success) {
+      res.status(200).json({ 
+        message: 'Solicitud de cita enviada exitosamente. Nos pondremos en contacto contigo pronto.',
+        solicitud: appointmentRequest
+      });
+    } else {
+      console.error('Error al enviar solicitud:', notificationResult.error);
+      res.status(500).json({ 
+        error: 'Error al enviar la solicitud. Intenta nuevamente o contacta por WhatsApp.' 
+      });
+    }
+
+  } catch (error) {
+    console.error('Error al procesar solicitud de cita:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 export {
   createAppointment,
   getAppointments,
   getAppointmentById,
   updateAppointment,
   deleteAppointment,
-  sendAppointmentReminderManual
+  sendAppointmentReminderManual,
+  requestAppointment
 }; 

@@ -1,4 +1,4 @@
-import { createAppointment, getAppointments, getAppointmentById, updateAppointment, deleteAppointment, sendAppointmentReminderManual } from './controller.js';
+import { createAppointment, getAppointments, getAppointmentById, updateAppointment, deleteAppointment, sendAppointmentReminderManual, requestAppointment } from './controller.js';
 import { Router } from 'express';
 import { authenticateToken } from '../auth/middleware.js';
 
@@ -11,5 +11,6 @@ router.get('/:id', authenticateToken, getAppointmentById);
 router.put('/:id', authenticateToken, updateAppointment);
 router.delete('/:id', authenticateToken, deleteAppointment);
 router.post('/:id/send-reminder', authenticateToken, sendAppointmentReminderManual);
+router.post('/request', authenticateToken, requestAppointment);
 
 export default router; 

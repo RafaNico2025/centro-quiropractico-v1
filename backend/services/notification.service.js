@@ -477,4 +477,202 @@ ${reason ? `📝 Motivo: ${reason}` : ''}
       whatsapp: { success: false, error: error.message }
     };
   }
+};
+
+// Función para enviar solicitud de cita desde dashboard del paciente
+export const sendAppointmentRequest = async (appointmentRequest) => {
+  try {
+    const { motivo, preferenciaDia, preferenciaHora, notas, solicitadoPor, emailSolicitante } = appointmentRequest;
+    
+    // Template de email para el centro quiropráctico
+    const emailTemplate = {
+      subject: '📋 Nueva Solicitud de Cita - Dashboard Paciente',
+      html: `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Nueva Solicitud de Cita</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+            .request-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            .detail-row { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #eee; align-items: flex-start; }
+            .detail-row:last-child { border-bottom: none; }
+            .label { font-weight: bold; color: #555; min-width: 150px; }
+            .value { color: #333; flex: 1; margin-left: 20px; }
+            .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px; }
+            .btn { display: inline-block; background: #007bff; color: white !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 10px 5px; font-weight: bold; font-size: 16px; }
+            .urgent { background: #dc3545; color: white; padding: 15px; border-radius: 8px; margin: 15px 0; font-weight: bold; }
+            .patient-info { background: #e7f3ff; padding: 15px; border-left: 4px solid #007bff; border-radius: 4px; margin: 15px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>📋 Centro Quiropráctico</h1>
+            <h2>Nueva Solicitud de Cita</h2>
+          </div>
+          
+          <div class="content">
+            <div class="urgent">
+              🚨 ACCIÓN REQUERIDA: Un paciente ha solicitado una cita desde el dashboard
+            </div>
+            
+            <div class="patient-info">
+              <h3>👤 Información del Solicitante:</h3>
+              <p><strong>Nombre:</strong> ${solicitadoPor}</p>
+              <p><strong>Email:</strong> ${emailSolicitante}</p>
+              <p><strong>Fecha de solicitud:</strong> ${new Date().toLocaleString('es-ES')}</p>
+            </div>
+            
+            <h3>📋 Detalles de la Solicitud:</h3>
+            <div class="request-details">
+              <div class="detail-row">
+                <span class="label">🩺 Motivo de Consulta:</span>
+                <span class="value">${motivo}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">📅 Preferencia de Día:</span>
+                <span class="value">${preferenciaDia}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">🕐 Preferencia de Hora:</span>
+                <span class="value">${preferenciaHora}</span>
+              </div>
+              ${notas ? `
+              <div class="detail-row">
+                <span class="label">📝 Notas Adicionales:</span>
+                <span class="value">${notas}</span>
+              </div>
+              ` : ''}
+            </div>
+
+            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <h4>🎯 Próximos Pasos:</h4>
+              <ol>
+                <li>Revisar la disponibilidad según las preferencias del paciente</li>
+                <li>Contactar al paciente por teléfono o email para confirmar</li>
+                <li>Crear la cita en el sistema una vez confirmada</li>
+                <li>Enviar confirmación al paciente</li>
+              </ol>
+            </div>
+
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="mailto:${emailSolicitante}?subject=Re: Solicitud de Cita&body=Estimado/a ${solicitadoPor},%0A%0AGracias por su solicitud de cita. Nos pondremos en contacto con usted para confirmar la fecha y hora.%0A%0ASaludos,%0ACentro Quiropráctico" class="btn">✉️ Responder por Email</a>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p><strong>Centro Quiropráctico - Sistema de Gestión</strong></p>
+            <p>Este email fue generado automáticamente desde el dashboard del paciente</p>
+            <p>Fecha: ${new Date().toLocaleString('es-ES')}</p>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    // Email de confirmación para el paciente
+    const patientEmailTemplate = {
+      subject: '✅ Solicitud de Cita Recibida - Centro Quiropráctico',
+      html: `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Solicitud Recibida</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+            .confirmation { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .next-steps { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .btn { display: inline-block; background: #28a745; color: white !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 10px 5px; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🏥 Centro Quiropráctico</h1>
+            <h2>Solicitud Recibida</h2>
+          </div>
+          
+          <div class="content">
+            <p>Estimado/a <strong>${solicitadoPor}</strong>,</p>
+            
+            <div class="confirmation">
+              <h3>✅ ¡Su solicitud ha sido recibida exitosamente!</h3>
+              <p>Hemos recibido su solicitud de cita con los siguientes detalles:</p>
+              <ul>
+                <li><strong>Motivo:</strong> ${motivo}</li>
+                <li><strong>Preferencia de día:</strong> ${preferenciaDia}</li>
+                <li><strong>Preferencia de hora:</strong> ${preferenciaHora}</li>
+                ${notas ? `<li><strong>Notas:</strong> ${notas}</li>` : ''}
+              </ul>
+            </div>
+
+            <div class="next-steps">
+              <h4>📞 ¿Qué sigue ahora?</h4>
+              <ol>
+                <li>Revisaremos su solicitud y disponibilidad</li>
+                <li>Nos contactaremos con usted en las próximas 24 horas</li>
+                <li>Confirmaremos fecha y hora específica</li>
+                <li>Le enviaremos la confirmación final</li>
+              </ol>
+            </div>
+
+            <p>Si necesita contactarnos urgentemente o hacer cambios a su solicitud, puede:</p>
+
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="https://wa.me/5493516171562?text=Hola,%20tengo%20una%20consulta%20sobre%20mi%20solicitud%20de%20cita" class="btn">📱 WhatsApp</a>
+              <a href="tel:+5493516171562" class="btn">📞 Llamar</a>
+            </div>
+
+            <p style="margin-top: 20px;">Gracias por confiar en nosotros para su cuidado quiropráctico.</p>
+            
+            <p><strong>Equipo Centro Quiropráctico</strong></p>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    // Enviar notificación al centro (email principal del sistema)
+    const centerEmail = process.env.EMAIL_USER; // El email del centro
+    const centerNotificationResult = await sendEmailNotification(
+      centerEmail, 
+      emailTemplate.subject, 
+      emailTemplate.html
+    );
+
+    // Enviar confirmación al paciente
+    const patientNotificationResult = await sendEmailNotification(
+      emailSolicitante,
+      patientEmailTemplate.subject,
+      patientEmailTemplate.html
+    );
+
+    console.log('📧 Resultados solicitud de cita:', {
+      centro: centerNotificationResult,
+      paciente: patientNotificationResult
+    });
+
+    // Si al menos uno de los emails se envió exitosamente, consideramos éxito
+    const success = centerNotificationResult.success || patientNotificationResult.success;
+
+    return {
+      success,
+      centerNotification: centerNotificationResult,
+      patientNotification: patientNotificationResult
+    };
+
+  } catch (error) {
+    console.error('❌ Error en sendAppointmentRequest:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }; 
