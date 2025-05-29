@@ -1,75 +1,72 @@
-import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { Button } from '../components/ui/button'
+import React, { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { NewIncomeForm } from "../components/NewIncomeForm";
+import { ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { incomeService } from "../services/income.service";
 
 export default function Accounting() {
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [openNewIncome, setOpenNewIncome] = useState(false);
+  const navigate = useNavigate();
+
+  const fetchTransactions = async () => {
+    setLoading(true);
+    // Obtener la fecha de hoy en formato YYYY-MM-DD
+    const today = new Date().toISOString().slice(0, 10);
+    const startDate = today;
+    const endDate = today;
+    try {
+      const data = await incomeService.getByDateRange(startDate, endDate);
+      setTransactions(data);
+    } catch (error) {
+      // Puedes mostrar un toast de error si lo deseas
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
   return (
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Contabilidad</h1>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="hover:bg-accent"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-3xl font-bold">Contabilidad</h1>
+        </div>
         <div className="flex gap-2">
-          <Button variant="outline">Exportar Reporte</Button>
-          <Button>Nuevo Ingreso</Button>
+          {/* <Button variant="outline">Exportar Reporte</Button> */}
+          <Button onClick={() => setOpenNewIncome(true)}>Nuevo Ingreso</Button>
         </div>
       </div>
 
-      <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Ingresos Mensuales
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$45,231</div>
-            <p className="text-xs text-muted-foreground">
-              +10% desde el mes pasado
-            </p>
-          </CardContent>
-        </Card>
+      {/* Modal de nuevo ingreso */}
+      <NewIncomeForm
+        open={openNewIncome}
+        onOpenChange={setOpenNewIncome}
+        onSuccess={fetchTransactions}
+      />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Gastos Mensuales
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$12,345</div>
-            <p className="text-xs text-muted-foreground">
-              +5% desde el mes pasado
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Beneficio Neto
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$32,886</div>
-            <p className="text-xs text-muted-foreground">
-              +12% desde el mes pasado
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Promedio por Paciente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$185</div>
-            <p className="text-xs text-muted-foreground">
-              +8% desde el mes pasado
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        ...estadísticas...
+      </div> */}
 
       <div className="mt-8">
         <Card>
@@ -78,24 +75,49 @@ export default function Accounting() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((item) => (
-                <div key={item} className="flex items-center justify-between border-b pb-4">
-                  <div>
-                    <p className="font-medium">Juan Pérez</p>
-                    <p className="text-sm text-muted-foreground">
-                      Fecha: 2024-03-20 | Tipo: Consulta
-                    </p>
+              {loading ? (
+                <div>Cargando...</div>
+              ) : transactions.length === 0 ? (
+                <div>No hay transacciones recientes.</div>
+              ) : (
+                transactions.slice(0, 5).map((income) => (
+                  <div
+                    key={income.id}
+                    className="flex items-center justify-between border-b pb-4"
+                  >
+                    <div>
+                      {/* Ahora accedes a la relación sin alias */}
+                      <p className="font-medium">
+                        {income.Patient?.firstName || "Sin paciente"}{" "}
+                        {/* paciente relacionado */}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Fecha: {new Date(income.date).toLocaleDateString()} |
+                        Tipo: {income.category || "N/A"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">${income.amount}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {income.status === "paid" ||
+                        income.paymentStatus === "completed"
+                          ? "Pagado"
+                          : income.status === "pending" ||
+                            income.paymentStatus === "pending"
+                          ? "Pendiente"
+                          : income.status === "partial" ||
+                            income.paymentStatus === "partial"
+                          ? "Parcial"
+                          : "Cancelado"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">$150</p>
-                    <p className="text-sm text-muted-foreground">Pagado</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
-  )
-} 
+  );
+}
