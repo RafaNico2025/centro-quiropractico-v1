@@ -9,6 +9,7 @@ import { AppointmentForm } from '../components/AppointmentForm'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { AppointmentCalendar } from '../components/AppointmentCalendar'
+import { useAuth } from '../context/AuthContext'
 
 // Componente para mostrar el estado del turno
 const StatusLabel = ({ status }) => {
@@ -42,6 +43,8 @@ export default function Appointments() {
   const [showForm, setShowForm] = useState(false)
   const { toast } = useToast()
   const navigate = useNavigate()
+  const [filtroEstado, setFiltroEstado] = useState('')
+  const { user } = useAuth()
 
   useEffect(() => {
     loadAppointments()
@@ -64,8 +67,38 @@ export default function Appointments() {
 
   const handleStatusChange = async (appointmentId, newStatus) => {
     try {
+      // Obtener información de la cita
+      const appointment = appointments.find(a => a.id === appointmentId)
+      const patientName = `${appointment.Patient?.firstName} ${appointment.Patient?.lastName}`
+      
+      // Confirmación para cambios importantes
+      let confirmMessage = ''
+      let successMessage = ''
+      
+      switch (newStatus) {
+        case 'completed':
+          confirmMessage = `¿Confirmar que atendiste al paciente ${patientName}?`
+          successMessage = `Cita de ${patientName} marcada como completada`
+          break
+        case 'cancelled':
+          confirmMessage = `¿Confirmar cancelación de la cita de ${patientName}?`
+          successMessage = `Cita de ${patientName} cancelada correctamente`
+          break
+        case 'no_show':
+          confirmMessage = `¿Confirmar que ${patientName} no asistió a la cita?`
+          successMessage = `Registrado: ${patientName} no asistió a la cita`
+          break
+        case 'rescheduled':
+          successMessage = `Preparando reagendado para ${patientName}`
+          break
+      }
+
+      // Mostrar confirmación para cambios que no sean reagendar
+      if (newStatus !== 'rescheduled' && !window.confirm(confirmMessage)) {
+        return
+      }
+
       if (newStatus === 'rescheduled') {
-        const appointment = appointments.find(a => a.id === appointmentId)
         await appointmentService.update(appointmentId, { status: newStatus })
         const updatedAppointments = appointments.map(app => 
           app.id === appointmentId 
@@ -78,24 +111,24 @@ export default function Appointments() {
       } else if (newStatus === 'cancelled') {
         await appointmentService.delete(appointmentId)
         await loadAppointments()
-        toast({
-          title: "Éxito",
-          description: "Cita cancelada correctamente"
-        })
       } else {
         await appointmentService.update(appointmentId, { status: newStatus })
         await loadAppointments()
-        toast({
-          title: "Éxito",
-          description: "Estado de la cita actualizado correctamente"
-        })
       }
+
+      toast({
+        title: "✅ Actualización exitosa",
+        description: successMessage,
+        duration: 3000
+      })
+      
     } catch (error) {
       console.error('Error al actualizar estado:', error)
       toast({
-        title: "Error",
-        description: "No se pudo actualizar el estado de la cita",
-        variant: "destructive"
+        title: "❌ Error",
+        description: "No se pudo actualizar el estado de la cita. Intenta nuevamente.",
+        variant: "destructive",
+        duration: 5000
       })
     }
   }
@@ -114,6 +147,24 @@ export default function Appointments() {
       appointmentDate.setHours(0, 0, 0, 0)
       return appointmentDate.getTime() > today.getTime()
     })
+  }
+
+  // Estadísticas rápidas
+  const getQuickStats = () => {
+    const totalCitas = appointments.length
+    const citasCompletadas = appointments.filter(a => a.status === 'completed').length
+    const citasCanceladas = appointments.filter(a => a.status === 'cancelled').length
+    const citasNoAsistio = appointments.filter(a => a.status === 'no_show').length
+    const citasProgramadas = appointments.filter(a => a.status === 'scheduled').length
+    
+    return {
+      total: totalCitas,
+      completadas: citasCompletadas,
+      programadas: citasProgramadas,
+      canceladas: citasCanceladas,
+      noAsistio: citasNoAsistio,
+      tasaAsistencia: totalCitas > 0 ? Math.round((citasCompletadas / totalCitas) * 100) : 0
+    }
   }
 
   const formatTime = (timeString) => {
@@ -160,6 +211,46 @@ export default function Appointments() {
         <Button onClick={() => setShowForm(true)}>Nueva Cita</Button>
       </div>
 
+      {/* Resumen de estadísticas rápidas */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-blue-600">{getQuickStats().total}</div>
+            <p className="text-xs text-muted-foreground">Total Citas</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-green-600">{getQuickStats().completadas}</div>
+            <p className="text-xs text-muted-foreground">Atendidas</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-blue-500">{getQuickStats().programadas}</div>
+            <p className="text-xs text-muted-foreground">Programadas</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-red-600">{getQuickStats().canceladas}</div>
+            <p className="text-xs text-muted-foreground">Canceladas</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-yellow-600">{getQuickStats().noAsistio}</div>
+            <p className="text-xs text-muted-foreground">No Asistió</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-purple-600">{getQuickStats().tasaAsistencia}%</div>
+            <p className="text-xs text-muted-foreground">Tasa Asistencia</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -169,7 +260,7 @@ export default function Appointments() {
             <div className="space-y-4">
               {getTodayAppointments().map((appointment) => (
                 <div key={appointment.id} className="flex items-center justify-between border-b pb-4">
-                  <div>
+                  <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-medium">{appointment.Patient?.firstName} {appointment.Patient?.lastName}</p>
                       <StatusLabel status={appointment.status} />
@@ -178,28 +269,42 @@ export default function Appointments() {
                       {formatTime(appointment.startTime)} - {appointment.reason}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {appointment.status === 'scheduled' && (
                       <>
                         <Button 
-                          variant="outline" 
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
                           onClick={() => handleStatusChange(appointment.id, 'completed')}
                         >
-                          Completar
+                          ✓ Atendido
                         </Button>
                         <Button 
+                          size="sm"
                           variant="outline" 
+                          className="border-yellow-500 text-yellow-700 hover:bg-yellow-50"
                           onClick={() => handleStatusChange(appointment.id, 'no_show')}
                         >
-                          No Asistió
+                          ⚠ No Asistió
                         </Button>
                         <Button 
+                          size="sm"
                           variant="outline" 
+                          className="border-red-500 text-red-700 hover:bg-red-50"
                           onClick={() => handleStatusChange(appointment.id, 'cancelled')}
                         >
-                          Cancelar
+                          ✕ Cancelar
                         </Button>
                       </>
+                    )}
+                    {appointment.status === 'completed' && (
+                      <span className="text-sm text-green-600 font-medium">✓ Completada</span>
+                    )}
+                    {appointment.status === 'cancelled' && (
+                      <span className="text-sm text-red-600 font-medium">✕ Cancelada</span>
+                    )}
+                    {appointment.status === 'no_show' && (
+                      <span className="text-sm text-yellow-600 font-medium">⚠ No Asistió</span>
                     )}
                   </div>
                 </div>
@@ -219,7 +324,7 @@ export default function Appointments() {
             <div className="space-y-4">
               {getUpcomingAppointments().map((appointment) => (
                 <div key={appointment.id} className="flex items-center justify-between border-b pb-4">
-                  <div>
+                  <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-medium">{appointment.Patient?.firstName} {appointment.Patient?.lastName}</p>
                       <StatusLabel status={appointment.status} />
@@ -229,19 +334,54 @@ export default function Appointments() {
                     </p>
                     <p className="text-sm text-muted-foreground">{appointment.reason}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => handleStatusChange(appointment.id, 'rescheduled')}
-                    >
-                      Reagendar
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => handleStatusChange(appointment.id, 'cancelled')}
-                    >
-                      Cancelar
-                    </Button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {appointment.status === 'scheduled' && (
+                      <>
+                        <Button 
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => handleStatusChange(appointment.id, 'completed')}
+                        >
+                          ✓ Atendido
+                        </Button>
+                        <Button 
+                          size="sm"
+                          variant="outline" 
+                          className="border-yellow-500 text-yellow-700 hover:bg-yellow-50"
+                          onClick={() => handleStatusChange(appointment.id, 'no_show')}
+                        >
+                          ⚠ No Asistió
+                        </Button>
+                        <Button 
+                          size="sm"
+                          variant="outline" 
+                          className="border-blue-500 text-blue-700 hover:bg-blue-50"
+                          onClick={() => handleStatusChange(appointment.id, 'rescheduled')}
+                        >
+                          📅 Reagendar
+                        </Button>
+                        <Button 
+                          size="sm"
+                          variant="outline" 
+                          className="border-red-500 text-red-700 hover:bg-red-50"
+                          onClick={() => handleStatusChange(appointment.id, 'cancelled')}
+                        >
+                          ✕ Cancelar
+                        </Button>
+                      </>
+                    )}
+                    {appointment.status === 'completed' && (
+                      <span className="text-sm text-green-600 font-medium">✓ Completada</span>
+                    )}
+                    {appointment.status === 'cancelled' && (
+                      <span className="text-sm text-red-600 font-medium">✕ Cancelada</span>
+                    )}
+                    {appointment.status === 'no_show' && (
+                      <span className="text-sm text-yellow-600 font-medium">⚠ No Asistió</span>
+                    )}
+                    {appointment.status === 'rescheduled' && (
+                      <span className="text-sm text-purple-600 font-medium">📅 Reagendada</span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -263,6 +403,125 @@ export default function Appointments() {
               appointments={appointments}
               onSelectEvent={handleSelectEvent}
             />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Nueva sección para gestión de todas las citas */}
+      <div className="mt-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Gestión de Citas</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Administra el estado de todas tus citas
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Filtros de estado */}
+              <div className="flex gap-2 flex-wrap mb-4">
+                <Button 
+                  variant={!filtroEstado ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFiltroEstado('')}
+                >
+                  Todas
+                </Button>
+                <Button 
+                  variant={filtroEstado === 'scheduled' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFiltroEstado('scheduled')}
+                  className="bg-blue-100 text-blue-800 hover:bg-blue-200"
+                >
+                  Programadas
+                </Button>
+                <Button 
+                  variant={filtroEstado === 'completed' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFiltroEstado('completed')}
+                  className="bg-green-100 text-green-800 hover:bg-green-200"
+                >
+                  Completadas
+                </Button>
+                <Button 
+                  variant={filtroEstado === 'cancelled' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFiltroEstado('cancelled')}
+                  className="bg-red-100 text-red-800 hover:bg-red-200"
+                >
+                  Canceladas
+                </Button>
+                <Button 
+                  variant={filtroEstado === 'no_show' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFiltroEstado('no_show')}
+                  className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                >
+                  No Asistió
+                </Button>
+              </div>
+
+              {/* Lista de citas filtradas */}
+              <div className="space-y-3">
+                {appointments
+                  .filter(appointment => !filtroEstado || appointment.status === filtroEstado)
+                  .sort((a, b) => new Date(b.date) - new Date(a.date))
+                  .slice(0, 10) // Mostrar solo las últimas 10
+                  .map((appointment) => (
+                  <div key={appointment.id} className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <p className="font-medium">{appointment.Patient?.firstName} {appointment.Patient?.lastName}</p>
+                        <StatusLabel status={appointment.status} />
+                        <span className="text-sm text-muted-foreground">
+                          {formatDate(appointment.date)} - {formatTime(appointment.startTime)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{appointment.reason}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {appointment.status === 'scheduled' && (
+                        <>
+                          <Button 
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => handleStatusChange(appointment.id, 'completed')}
+                          >
+                            ✓ Marcar Atendido
+                          </Button>
+                          <Button 
+                            size="sm"
+                            variant="outline" 
+                            className="border-yellow-500 text-yellow-700 hover:bg-yellow-50"
+                            onClick={() => handleStatusChange(appointment.id, 'no_show')}
+                          >
+                            ⚠ No Asistió
+                          </Button>
+                          <Button 
+                            size="sm"
+                            variant="outline" 
+                            className="border-red-500 text-red-700 hover:bg-red-50"
+                            onClick={() => handleStatusChange(appointment.id, 'cancelled')}
+                          >
+                            ✕ Cancelar
+                          </Button>
+                        </>
+                      )}
+                      {appointment.status !== 'scheduled' && (
+                        <div className="text-sm text-muted-foreground">
+                          Estado actualizado
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {appointments.filter(appointment => !filtroEstado || appointment.status === filtroEstado).length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">
+                    No hay citas con el estado seleccionado
+                  </p>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

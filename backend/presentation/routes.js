@@ -5,6 +5,7 @@ import appointmentRoutes from './appointment/routes.js';
 import patientRoutes from './patient/routes.js';
 import medicalHistoryRoutes from './medicalHistory/routes.js';
 import incomeRoutes from './income/routes.js';
+import statsRoutes from './stats/routes.js';
 
 const router = express.Router();
 
@@ -14,5 +15,6 @@ router.use('/appointments', appointmentRoutes);
 router.use('/patients', patientRoutes);
 router.use('/medical-history', medicalHistoryRoutes);
 router.use('/incomes', incomeRoutes);
+router.use('/stats', statsRoutes);
 
 export default router;
