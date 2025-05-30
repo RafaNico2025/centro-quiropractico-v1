@@ -29,6 +29,8 @@ const PatientDashboard = () => {
     notas: "",
   });
 
+  const storedUser = user || JSON.parse(localStorage.getItem("user") || "{}");
+
   // 1. Traer datos del usuario por ID
   const loadUserData = async () => {
     try {
@@ -187,7 +189,6 @@ const PatientDashboard = () => {
     window.open(whatsappUrl, "_blank");
   };
 
-  console.log("storedUser.id:", storedUser?.id);
 
   return (
     <div className="min-h-screen bg-gray-50">
