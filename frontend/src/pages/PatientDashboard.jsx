@@ -29,8 +29,6 @@ const PatientDashboard = () => {
     notas: "",
   });
 
-  const storedUser = user || JSON.parse(localStorage.getItem("user") || "{}");
-
   // 1. Traer datos del usuario por ID
   const loadUserData = async () => {
     try {
