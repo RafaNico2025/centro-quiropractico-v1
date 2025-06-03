@@ -45,19 +45,34 @@ export function AppointmentForm({ open, onOpenChange, onSuccess, appointment }) 
       }
     }
 
+    // Resetear el formulario cuando se abre
+    const resetForm = {
+      date: '',
+      startTime: '',
+      endTime: '',
+      reason: '',
+      notes: '',
+      patientId: '',
+      professionalId: ''
+    }
+
     if (open) {
       loadData()
-      if (appointment) {
-        setFormData({
-          date: appointment.date,
-          startTime: appointment.startTime,
-          endTime: appointment.endTime,
-          reason: appointment.reason || '',
-          notes: appointment.notes || '',
-          patientId: appointment.patientId.toString(),
-          professionalId: appointment.professionalId.toString()
-        })
-      } else {
+      // Si hay una cita para editar, usar sus datos, sino usar el formulario vacío
+      setFormData(appointment ? {
+        date: appointment.date,
+        startTime: appointment.startTime,
+        endTime: appointment.endTime,
+        reason: appointment.reason || '',
+        notes: appointment.notes || '',
+        patientId: appointment.patientId.toString(),
+        professionalId: appointment.professionalId.toString()
+      } : resetForm)
+    }
+
+    // Limpiar el formulario cuando se cierra
+    return () => {
+      if (!open) {
         setFormData({
           date: '',
           startTime: '',
@@ -67,6 +82,7 @@ export function AppointmentForm({ open, onOpenChange, onSuccess, appointment }) 
           patientId: '',
           professionalId: ''
         })
+        setLoadingData(true)
       }
     }
   }, [open, appointment])

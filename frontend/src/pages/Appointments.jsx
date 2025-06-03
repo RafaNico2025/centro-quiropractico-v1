@@ -187,10 +187,25 @@ export default function Appointments() {
   const getUpcomingAppointments = () => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
+    console.log('Fecha de hoy:', today)
+    
     return appointments.filter(appointment => {
       const appointmentDate = new Date(appointment.date)
       appointmentDate.setHours(0, 0, 0, 0)
-      return appointmentDate.getTime() > today.getTime()
+      console.log('Cita:', {
+        fecha: appointmentDate,
+        estado: appointment.status,
+        esFutura: appointmentDate.getTime() > today.getTime(),
+        noCancelada: appointment.status !== 'cancelled'
+      })
+      
+      // Ajustamos la comparación de fechas para considerar la zona horaria
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      return (
+        appointmentDate.getTime() >= today.getTime() && 
+        appointment.status !== 'cancelled'
+      )
     })
   }
 
@@ -380,23 +395,8 @@ export default function Appointments() {
                     <p className="text-sm text-muted-foreground">{appointment.reason}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {appointment.status === 'scheduled' && (
+                    {(appointment.status === 'scheduled' || appointment.status === 'rescheduled') && (
                       <>
-                        <Button 
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700"
-                          onClick={() => handleStatusChange(appointment.id, 'completed')}
-                        >
-                          ✓ Atendido
-                        </Button>
-                        <Button 
-                          size="sm"
-                          variant="outline" 
-                          className="border-yellow-500 text-yellow-700 hover:bg-yellow-50"
-                          onClick={() => handleStatusChange(appointment.id, 'no_show')}
-                        >
-                          ⚠ No Asistió
-                        </Button>
                         <Button 
                           size="sm"
                           variant="outline" 
@@ -533,7 +533,7 @@ export default function Appointments() {
                       <p className="text-sm text-muted-foreground">{appointment.reason}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      {appointment.status === 'scheduled' && (
+                      {(appointment.status === 'scheduled' || appointment.status === 'rescheduled') && (
                         <>
                           <Button 
                             size="sm"
@@ -560,7 +560,7 @@ export default function Appointments() {
                           </Button>
                         </>
                       )}
-                      {appointment.status !== 'scheduled' && (
+                      {appointment.status !== 'scheduled' && appointment.status !== 'rescheduled' && (
                         <div className="text-sm text-muted-foreground">
                           Estado actualizado
                         </div>
@@ -581,7 +581,12 @@ export default function Appointments() {
 
       <AppointmentForm
         open={showForm}
-        onOpenChange={setShowForm}
+        onOpenChange={(open) => {
+          setShowForm(open)
+          if (!open) {
+            setSelectedAppointment(null)
+          }
+        }}
         onSuccess={loadAppointments}
         appointment={selectedAppointment}
       />
