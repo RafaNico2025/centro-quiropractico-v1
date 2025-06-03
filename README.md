@@ -251,6 +251,43 @@ npm test
 npm run test:notifications
 ```
 
+
+### Frontend
+
+El frontend cuenta con pruebas unitarias automatizadas utilizando **Vitest** y **Testing Library**.
+
+#### Ejecutar los tests del frontend
+
+```bash
+cd frontend
+npm run test
+```
+o
+```bash
+npx vitest run
+```
+
+#### Estructura de los tests
+
+- Los tests se encuentran en:  
+  `frontend/src/__tests__/`
+- Los mocks de componentes UI y servicios están en:  
+  `frontend/src/__tests__/__mocks__/`
+
+#### Ejemplo de script de prueba
+
+```jsx
+it('valida campos requeridos', async () => {
+  render(<AppointmentForm {...defaultProps} />)
+  const submitButton = screen.getByRole('button', { name: /crear/i })
+  fireEvent.click(submitButton)
+  expect(screen.getByLabelText('Fecha')).toBeRequired()
+  expect(screen.getByLabelText('Hora de inicio')).toBeRequired()
+  expect(screen.getByLabelText('Hora de fin')).toBeRequired()
+  expect(screen.getByLabelText('Motivo')).toBeRequired()
+})
+```
+
 ## 👥 Autores
 
 - Nicolás Castro
