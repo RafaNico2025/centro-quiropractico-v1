@@ -203,7 +203,6 @@ npm run lint       # Ejecutar linter
 ### Para Pacientes
 - Dashboard personal
 - Visualización de citas programadas
-- Acceso a historial clínico
 - Información de contacto del centro
 
 ## 🔐 Autenticación y Seguridad

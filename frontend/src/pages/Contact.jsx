@@ -172,7 +172,7 @@ const Contact = () => {
                     </svg>
                     <div>
                       <h4 className="font-medium text-gray-800">Teléfono</h4>
-                      <p className="text-gray-600">+54 351 617 1562</p>
+                      <p className="text-gray-600">+54 353 730 4294</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-4">
@@ -190,9 +190,12 @@ const Contact = () => {
               <div className="bg-white p-8 rounded-lg shadow-lg">
                 <h3 className="text-2xl font-semibold mb-4 text-gray-800">Horarios de atención</h3>
                 <div className="space-y-2">
-                  <p className="text-gray-600">Lunes, Martes y Jueves: 14:00 - 20:00</p>
-                  <p className="text-gray-600">Miércoles: 8:00 - 13:00</p>
-                  <p className="text-gray-600">Viernes, Sábados y Domingos: Cerrado</p>
+                  <p className="text-gray-600">Lunes: 14:00 - 20:00</p>
+                  <p className="text-gray-600">Martes: 14:00 - 20:00</p>
+                  <p className="text-gray-600">Miércoles: 14:00 - 18:00</p>
+                  <p className="text-gray-600">Jueves: 14:00 - 20:00</p>
+                  <p className="text-gray-600">Viernes: 14:00 - 17:00</p>
+                  <p className="text-gray-600">Sábados y Domingos: Cerrado</p>
                 </div>
               </div>
             </div>

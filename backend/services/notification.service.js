@@ -113,7 +113,7 @@ const emailTemplates = {
           </div>
 
           <div style="text-align: center; margin: 20px 0;">
-            <a href="tel:+5491123456789" class="btn">📞 Contactar por Teléfono</a>
+            <a href="tel:+5493537304294" class="btn">📞 Contactar por Teléfono</a>
             <a href="mailto:${process.env.EMAIL_USER}" class="btn btn-secondary">✉️ Enviar Consulta</a>
           </div>
         </div>
@@ -121,7 +121,7 @@ const emailTemplates = {
         <div class="footer">
           <p><strong>Centro Quiropráctico</strong></p>
           <p>Cuidando su salud con profesionalismo y dedicación</p>
-          <p>Dirección del centro | Teléfono: +54 911 234 5678</p>
+          <p>Dirección del centro | Teléfono: +54 353 730 4294</p>
           <p style="font-size: 12px; color: #999;">
             Este email fue enviado a ${patient.email} porque solicitó un turno en nuestro centro.
             Si no debería recibir estos emails, contáctenos.
@@ -193,8 +193,8 @@ const emailTemplates = {
           </div>
 
           <div style="text-align: center; margin: 20px 0;">
-            <a href="tel:+5491123456789" class="btn">📞 Confirmar por Teléfono</a>
-            <a href="tel:+5491123456789" class="btn btn-cancel">❌ Cancelar Turno</a>
+            <a href="tel:+5493537304294" class="btn">📞 Confirmar por Teléfono</a>
+            <a href="tel:+5493537304294" class="btn btn-cancel">❌ Cancelar Turno</a>
           </div>
         </div>
 
@@ -274,7 +274,7 @@ const emailTemplates = {
           </div>
 
           <div style="text-align: center; margin: 20px 0;">
-            <a href="tel:+5491123456789" class="btn">📞 Reagendar mi Turno</a>
+            <a href="tel:+5493537304294" class="btn">📞 Reagendar mi Turno</a>
           </div>
         </div>
 
@@ -382,7 +382,7 @@ export const sendAppointmentNotification = async (appointment, patient, professi
 👨‍⚕️ Profesional: Dr. ${professional?.name || 'No asignado'} ${professional?.lastName || ''}
 
 💡 Llegue 10 minutos antes de su cita.
-📞 Para cancelar/reprogramar: +54 911 234 5678
+📞 Para cancelar/reprogramar: +54 353 730 4294
     `.trim();
 
     // Enviar notificaciones en paralelo
@@ -421,7 +421,7 @@ export const sendAppointmentReminder = async (appointment, patient, professional
 🕐 Hora: ${appointment.startTime}
 
 💡 No olvide llegar 10 minutos antes.
-📞 +54 911 234 5678
+📞 +54 353 730 4294
     `.trim();
 
     const [emailResult, whatsappResult] = await Promise.allSettled([
@@ -457,7 +457,7 @@ export const sendAppointmentCancellation = async (appointment, patient, professi
 
 ${reason ? `📝 Motivo: ${reason}` : ''}
 
-💡 Para reagendar: +54 911 234 5678
+💡 Para reagendar: +54 353 730 4294
     `.trim();
 
     const [emailResult, whatsappResult] = await Promise.allSettled([
@@ -561,8 +561,8 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
             </div>
 
             <div style="text-align: center; margin: 20px 0;">
+              <a href="tel:+5493537304294" class="btn">📞 Contactar por Teléfono</a>
               <a href="mailto:${emailSolicitante}?subject=Re: Solicitud de Cita&body=Estimado/a ${solicitadoPor},%0A%0AGracias por su solicitud de cita. Nos pondremos en contacto con usted para confirmar la fecha y hora.%0A%0ASaludos,%0ACentro Quiropráctico" class="btn">✉️ Responder por Email</a>
-              <a href="tel:${telefonoSolicitante}" class="btn" style="background: #28a745;">📞 Llamar al Paciente</a>
             </div>
           </div>
 
@@ -628,8 +628,8 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
             <p>Si necesita contactarnos urgentemente o hacer cambios a su solicitud, puede:</p>
 
             <div style="text-align: center; margin: 20px 0;">
-              <a href="https://wa.me/5493516171562?text=Hola,%20tengo%20una%20consulta%20sobre%20mi%20solicitud%20de%20cita" class="btn">📱 WhatsApp</a>
-              <a href="tel:+5493516171562" class="btn">📞 Llamar</a>
+              <a href="https://wa.me/5493537304294?text=Hola,%20tengo%20una%20consulta%20sobre%20mi%20solicitud%20de%20cita" class="btn">📱 WhatsApp</a>
+              <a href="tel:+5493537304294" class="btn">📞 Llamar</a>
             </div>
 
             <p style="margin-top: 20px;">Gracias por confiar en nosotros para su cuidado quiropráctico.</p>
