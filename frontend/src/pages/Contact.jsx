@@ -163,7 +163,7 @@ const Contact = () => {
                     </svg>
                     <div>
                       <h4 className="font-medium text-gray-800">Dirección</h4>
-                      <p className="text-gray-600">Av. Principal 123, Ciudad</p>
+                      <p className="text-gray-600">Vélez Sársfield 149, Bell Ville X2550AUC</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-4">
@@ -172,7 +172,7 @@ const Contact = () => {
                     </svg>
                     <div>
                       <h4 className="font-medium text-gray-800">Teléfono</h4>
-                      <p className="text-gray-600">+54 123 456 7890</p>
+                      <p className="text-gray-600">+54 351 617 1562</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-4">
@@ -190,9 +190,9 @@ const Contact = () => {
               <div className="bg-white p-8 rounded-lg shadow-lg">
                 <h3 className="text-2xl font-semibold mb-4 text-gray-800">Horarios de atención</h3>
                 <div className="space-y-2">
-                  <p className="text-gray-600">Lunes a Viernes: 9:00 - 20:00</p>
-                  <p className="text-gray-600">Sábados: 9:00 - 14:00</p>
-                  <p className="text-gray-600">Domingos: Cerrado</p>
+                  <p className="text-gray-600">Lunes, Martes y Jueves: 14:00 - 20:00</p>
+                  <p className="text-gray-600">Miércoles: 8:00 - 13:00</p>
+                  <p className="text-gray-600">Viernes, Sábados y Domingos: Cerrado</p>
                 </div>
               </div>
             </div>

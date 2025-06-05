@@ -282,7 +282,7 @@ const LandingPage = () => {
                   </svg>
                   <div>
                     <h3 className="font-bold">Dirección</h3>
-                    <p className="text-gray-600">Calle Principal 123, Ciudad</p>
+                    <p className="text-gray-600">Vélez Sársfield 149, Bell Ville X2550AUC</p>
                   </div>
                 </div>
                 <div className="flex items-start">
@@ -291,7 +291,7 @@ const LandingPage = () => {
                   </svg>
                   <div>
                     <h3 className="font-bold">Teléfono</h3>
-                    <p className="text-gray-600">(123) 456-7890</p>
+                    <p className="text-gray-600">+54 351 617 1562</p>
                   </div>
                 </div>
                 <div className="flex items-start">
@@ -309,15 +309,16 @@ const LandingPage = () => {
                   </svg>
                   <div>
                     <h3 className="font-bold">Horario</h3>
-                    <p className="text-gray-600">Lunes - Viernes: 9:00 - 18:00</p>
-                    <p className="text-gray-600">Sábado: 9:00 - 13:00</p>
+                    <p className="text-gray-600">Lunes, Martes y Jueves: 14:00 - 20:00</p>
+                    <p className="text-gray-600">Miércoles: 8:00 - 13:00</p>
+                    <p className="text-gray-600">Viernes, Sábados y Domingos: Cerrado</p>
                   </div>
                 </div>
               </div>
             </div>
             <div className="h-96">
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3284.016888186441!2d-58.3837594!3d-34.6037388!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x95bccacf9f8d7e4f%3A0x4b7d4d9b0b7c0b7d!2sCentro%20Quiropr%C3%A1ctico!5e0!3m2!1ses!2sar!4v1620000000000!5m2!1ses!2sar"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3348.1234567890123!2d-62.6889!3d-32.6239!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x95c7d1c9c9c9c9c9%3A0x1234567890abcdef!2sV%C3%A9lez%20S%C3%A1rsfield%20149%2C%20Bell%20Ville%2C%20C%C3%B3rdoba!5e0!3m2!1ses!2sar!4v1620000000000!5m2!1ses!2sar"
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
