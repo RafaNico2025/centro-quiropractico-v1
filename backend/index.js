@@ -9,7 +9,14 @@ import specs from './config/swagger.js';
 const app = express();
 
 const corsOptions = {
-  origin: ['http://localhost:3000','http://localhost:3001','http://localhost:5173', 'https://centroquirogc.vercel.app'],
+  origin: (origin, callback) => {
+    const allowed = process.env.ALLOWED_ORIGINS.split(',');
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   credentials: true,
 };
