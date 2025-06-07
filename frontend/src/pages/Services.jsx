@@ -37,7 +37,7 @@ const Services = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center">
               <img src="/init-logo.png" alt="Logo" className="h-12" />
-              <span className="ml-2 text-xl font-bold text-gray-800">Centro Quiropráctico</span>
+              <span className="ml-2 text-xl font-bold text-gray-800">Gonzalo Cajeao Quiropraxia</span>
             </Link>
 
             {/* Menú de navegación - Desktop */}

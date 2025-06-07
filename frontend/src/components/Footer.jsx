@@ -7,7 +7,7 @@ const Footer = () => {
             <div className="container mx-auto px-4">
               <div className="grid md:grid-cols-3 gap-8 text-center">
                 <div>
-                  <h3 className="text-lg font-bold mb-4">Centro Quiropráctico</h3>
+                  <h3 className="text-lg font-bold mb-4">Gonzalo Cajeao Quiropraxia</h3>
                   <p className="text-gray-400">
                     Tu salud es nuestra prioridad. Ofrecemos tratamientos profesionales y personalizados.
                   </p>
@@ -17,12 +17,10 @@ const Footer = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     >
-
                       <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                       </svg>
                     </a>
-                     
                     <a 
                     href="https://www.instagram.com/quiropraxia_gonzalo_cajeao/"  
                     className="text-gray-400 hover:text-white"
@@ -55,19 +53,9 @@ const Footer = () => {
                     <li>Sábados y Domingos: Cerrado</li>
                   </ul>
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold mb-4">Síguenos</h3>
-                  <div className="flex space-x-4">
-                    <a href="https://www.instagram.com/quiropraxia_gonzalo_cajeao/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white">
-                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                      </svg>
-                    </a>
-                  </div>
-                </div>
               </div>
               <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-                <p>&copy; 2025 Centro Quiropráctico Gonzalo Cajeao. Todos los derechos reservados.</p>
+                <p>&copy; 2025 Gonzalo Cajeao Quiropraxia. Todos los derechos reservados.</p>
               </div>
             </div>
           </footer>

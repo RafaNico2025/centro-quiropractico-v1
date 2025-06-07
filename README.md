@@ -1,16 +1,16 @@
-# 🏥 Centro Quiropráctico - Sistema de Gestión
+# 🏥 Gonzalo Cajeao Quiropraxia - Sistema de Gestión
 
-Sistema web integral para la gestión de un centro quiropráctico que incluye gestión de pacientes, citas médicas, servicios, contabilidad y estadísticas.
+Sistema web integral para la gestión de un consultorio quiropráctico que incluye gestión de pacientes, citas médicas, servicios, contabilidad y estadísticas.
 
 ## 📋 Descripción
 
-Este proyecto está desarrollado como un sistema completo para la administración de un centro quiropráctico, permitiendo a los profesionales gestionar eficientemente:
+Este proyecto está desarrollado como un sistema completo para la administración de un consultorio quiropráctico, permitiendo a los profesionales gestionar eficientemente:
 
 - **Gestión de Pacientes**: Registro y administración de expedientes clínicos
 - **Sistema de Citas**: Programación y gestión de turnos médicos
 - **Servicios**: Catálogo de tratamientos y terapias disponibles
 - **Contabilidad**: Control de pagos y facturación
-- **Estadísticas**: Reportes y análisis de datos del centro
+- **Estadísticas**: Reportes y análisis de datos del consultorio
 - **Dashboard**: Panel de control para profesionales y pacientes
 
 ## 🏗️ Arquitectura del Proyecto

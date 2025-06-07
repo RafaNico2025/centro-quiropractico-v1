@@ -38,7 +38,7 @@ const LandingPage = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center">
               <img src="/init-logo.png" alt="Logo" className="h-12" />
-              <span className="ml-2 text-xl font-bold text-gray-800">Centro Quiropráctico</span>
+              <span className="ml-2 text-xl font-bold text-gray-800">Gonzalo Cajeao Quiropraxia</span>
             </Link>
 
             {/* Menú de navegación - Desktop */}
@@ -300,7 +300,7 @@ const LandingPage = () => {
                   </svg>
                   <div>
                     <h3 className="font-bold">Email</h3>
-                    <p className="text-gray-600">info@centroquiro.com</p>
+                    <p className="text-gray-600">@quiropraxia_gonzalo_cajeao</p>
                   </div>
                 </div>
                 <div className="flex items-start">

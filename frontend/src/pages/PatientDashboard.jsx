@@ -198,7 +198,7 @@ const PatientDashboard = () => {
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <h1 className="text-xl font-bold text-gray-800">
-                Centro Quiropráctico
+                Gonzalo Cajeao Quiropraxia
               </h1>
             </div>
             <div className="flex items-center space-x-4">

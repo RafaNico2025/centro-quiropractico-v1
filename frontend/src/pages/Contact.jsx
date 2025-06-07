@@ -20,7 +20,7 @@ const Contact = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center">
               <img src="/init-logo.png" alt="Logo" className="h-12" />
-              <span className="ml-2 text-xl font-bold text-gray-800">Centro Quiropráctico</span>
+              <span className="ml-2 text-xl font-bold text-gray-800">Gonzalo Cajeao Quiropraxia</span>
             </Link>
 
             {/* Menú de navegación - Desktop */}
@@ -117,7 +117,7 @@ const Contact = () => {
                     type="email"
                     id="email"
                     className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="tu@email.com"
+                    placeholder="Tu Email"
                   />
                 </div>
                 <div>
@@ -181,7 +181,7 @@ const Contact = () => {
                     </svg>
                     <div>
                       <h4 className="font-medium text-gray-800">Email</h4>
-                      <p className="text-gray-600">contacto@centroquiro.com</p>
+                      <p className="text-gray-600">@quiropraxia_gonzalo_cajeao</p>
                     </div>
                   </div>
                 </div>
