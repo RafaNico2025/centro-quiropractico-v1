@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Progress } from '../components/ui/progress'
 import { DateRangePicker } from '../components/ui/date-range-picker'
 import { Button } from '../components/ui/button'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { ArrowLeft, RefreshCw, FileSpreadsheet } from 'lucide-react'
 import { useToast } from '../components/ui/use-toast'
 import { statsService } from '../services/stats.service'
 
@@ -97,6 +97,29 @@ export default function Stats() {
     loadAllStats()
   }
 
+  const handleExportToExcel = async () => {
+    try {
+      setIsLoading(true);
+      await statsService.exportToExcel({
+        startDate: dateRange.from.toISOString().split('T')[0],
+        endDate: dateRange.to.toISOString().split('T')[0]
+      });
+      toast({
+        title: "Éxito",
+        description: "Las estadísticas se han exportado correctamente",
+      });
+    } catch (error) {
+      console.error('Error al exportar estadísticas:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron exportar las estadísticas",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (isLoading && !generalStats) {
     return (
       <div className="container mx-auto p-6">
@@ -134,6 +157,9 @@ export default function Stats() {
             disabled={isLoading}
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button variant="outline" onClick={handleExportToExcel} disabled={isLoading}>
+            <FileSpreadsheet className="h-4 w-4" />
           </Button>
         </div>
       </div>
