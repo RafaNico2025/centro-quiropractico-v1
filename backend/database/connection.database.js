@@ -27,6 +27,9 @@ const Incomes = Income(sequelize);
 Patients.hasMany(Appointments, { foreignKey: 'patientId' });
 Appointments.belongsTo(Patients, { foreignKey: 'patientId' });
 
+Patients.hasOne(Users, { foreignKey: 'patientId' });
+Users.belongsTo(Patients, { foreignKey: 'patientId' });
+
 Users.hasMany(Appointments, { foreignKey: 'professionalId', as: 'professional' });
 Appointments.belongsTo(Users, { foreignKey: 'professionalId', as: 'professional' });
 
