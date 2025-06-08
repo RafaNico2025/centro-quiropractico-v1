@@ -12,6 +12,7 @@ import { appointmentService } from "../services/appointment.service";
 import { toast } from "../components/ui/use-toast";
 import { userService } from "../services/user.service";
 import api from "../services/api";
+import { PatientEdit } from "../components/PatientEdit"; // Asegúrate de importar el componente
 
 const PatientDashboard = () => {
   const { user, logout } = useAuth();
@@ -22,43 +23,29 @@ const PatientDashboard = () => {
   const [nextAppointment, setNextAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
+  const [patientData, setPatientData] = useState(null);
   const [appointmentRequest, setAppointmentRequest] = useState({
     motivo: "",
     preferenciaDia: "",
     preferenciaHora: "",
     notas: "",
   });
+  const [editOpen, setEditOpen] = useState(false);
 
   const storedUser = user || JSON.parse(localStorage.getItem("user") || "{}");
 
-  // 1. Traer datos del usuario por ID
+  // 1. Traer datos del usuario por ID (incluye paciente)
   const loadUserData = async () => {
     try {
       const response = await api.get(`/users/${storedUser.id}`);
       setUserData(response.data);
+      setPatientData(response.data.Patient || null); // Guarda la data del paciente si existe
     } catch (error) {
       console.error("Error al obtener usuario:", error);
     }
   };
 
-  // 2. Traer pacientes y buscar coincidencia
-  const loadPatients = async () => {
-    try {
-      const data = await userService.getPatients();
-      setPatients(data);
-      // Comparar name del usuario con firstName del paciente
-      if (userData) {
-        const match = data.find(
-          (p) =>
-            p.firstName?.toLowerCase() === userData.Nombre?.toLowerCase() ||
-            p.firstName?.toLowerCase() === userData.name?.toLowerCase()
-        );
-        setPatientMatch(match);
-      }
-    } catch (error) {
-      console.error("Error al obtener pacientes:", error);
-    }
-  };
+  
 
   // 3. Traer appointments y filtrar por paciente
   const loadAppointments = async () => {
@@ -221,21 +208,74 @@ const PatientDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Información del Paciente */}
           <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Mi Información</CardTitle>
+              <Button size="sm" onClick={() => setEditOpen(true)}>
+                Editar
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div>
                   <p className="font-medium text-gray-700">Nombre:</p>
                   <p className="text-gray-600">
-                    {userData?.Nombre || userData?.name || "No disponible"}
+                    {patientData?.firstName || userData?.name || "No disponible"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">Apellido:</p>
+                  <p className="text-gray-600">
+                    {patientData?.lastName || userData?.lastName || "No disponible"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">DNI:</p>
+                  <p className="text-gray-600">
+                    {patientData?.dni || "No disponible"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">Fecha de Nacimiento:</p>
+                  <p className="text-gray-600">
+                    {patientData?.birthDate
+                      ? new Date(patientData.birthDate).toLocaleDateString("es-AR")
+                      : "No disponible"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">Dirección:</p>
+                  <p className="text-gray-600">
+                    {patientData?.address || "No disponible"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">Género:</p>
+                  <p className="text-gray-600">
+                    {patientData?.gender || "No disponible"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">Teléfono:</p>
+                  <p className="text-gray-600">
+                    {patientData?.phone || userData?.phone || "No disponible"}
                   </p>
                 </div>
                 <div>
                   <p className="font-medium text-gray-700">Email:</p>
                   <p className="text-gray-600">
-                    {userData?.Email || userData?.email || "No disponible"}
+                    {patientData?.email || userData?.email || "No disponible"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">Contacto de Emergencia:</p>
+                  <p className="text-gray-600">
+                    {patientData?.emergencyContact || "No disponible"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">Teléfono de Emergencia:</p>
+                  <p className="text-gray-600">
+                    {patientData?.emergencyPhone || "No disponible"}
                   </p>
                 </div>
                 <div>
@@ -258,6 +298,14 @@ const PatientDashboard = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Modal de edición */}
+          <PatientEdit
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            patientId={patientData?.id}
+            onSuccess={loadUserData}
+          />
 
           {/* Solicitar Cita */}
           <Card className="hover:shadow-lg transition-shadow">
