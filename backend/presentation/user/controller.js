@@ -109,7 +109,13 @@ const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await Users.findByPk(id, {
-      attributes: { exclude: ['Password'] }
+      attributes: { exclude: ['Password'] },
+      include: [
+        {
+          model: Patients,
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'dni', 'birthDate', 'address', 'gender', 'emergencyContact', 'emergencyPhone'],
+        }
+      ]
     });
 
     if (!user) {
@@ -528,4 +534,4 @@ export default {
   changePassword,
   getProfessionals,
   getPatients
-}; 
+};
