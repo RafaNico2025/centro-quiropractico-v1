@@ -85,7 +85,7 @@ const register = async (req, res) => {
     if (existeUsuario) return res.status(400).json({ message: 'El usuario ya existe' });
 
     // Verificar si ya existe un paciente con ese DNI
-    const pacienteExistente = await Patients.findOne({ where: { dni } });
+    let pacienteExistente = await Patients.findOne({ where: { dni } });
     
     // Si el paciente existe y ya tiene cuenta de usuario
     if (pacienteExistente && pacienteExistente.hasUserAccount) {
@@ -94,6 +94,7 @@ const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Crear el usuario primero, sin patientId
     const nuevoUsuario = await Users.create({
       username,
       password: hashedPassword,
@@ -103,6 +104,8 @@ const register = async (req, res) => {
       email,
       role: role || 'patient'
     });
+
+    let pacienteFinal = pacienteExistente;
 
     // Si el usuario es un paciente
     if (role === 'patient' || !role) {
@@ -118,7 +121,7 @@ const register = async (req, res) => {
           });
         } else {
           // Si no existe, creamos un nuevo paciente
-          await Patients.create({
+          pacienteFinal = await Patients.create({
             firstName: name,
             lastName: lastName,
             dni: dni,
@@ -127,6 +130,12 @@ const register = async (req, res) => {
             hasUserAccount: true
           });
         }
+        // Si se creó un nuevo paciente, actualizar pacienteFinal
+        if (!pacienteExistente) {
+          pacienteExistente = pacienteFinal;
+        }
+        // Asignar el patientId al usuario
+        await nuevoUsuario.update({ patientId: pacienteFinal.id });
       } catch (error) {
         console.error('Error al crear/actualizar paciente:', error);
         // No retornamos error aquí para no afectar el registro del usuario
