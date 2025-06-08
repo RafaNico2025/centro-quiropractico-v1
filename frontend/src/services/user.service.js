@@ -13,6 +13,17 @@ export const userService = {
     }
   },
 
+  getPatientById: async (id) => {
+    try {
+      const response = await api.get(`/users/patients/${id}`)
+      console.log('Respuesta de paciente por ID:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('Error al obtener paciente por ID:', error)
+      throw error.response?.data || error.message
+    }
+  },
+
   // Obtener todos los profesionales
   getProfessionals: async () => {
     try {
