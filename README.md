@@ -289,6 +289,7 @@ it('valida campos requeridos', async () => {
 ### SWAGGER
 - Iniciar el servidor
 - Visita: http://localhost:3000/api-docs
+- En Producción: https://centro-quiropractico-v1.onrender.com/api-docs/#/
 
 ## 👥 Autores
 
