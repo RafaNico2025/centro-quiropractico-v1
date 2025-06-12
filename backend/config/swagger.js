@@ -14,8 +14,12 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:3000/api/v1',
-        description: 'Servidor de desarrollo'
+        url: process.env.NODE_ENV === 'production' 
+          ? `https://centro-quiropractico-v1.onrender.com/api/v1`
+          : 'http://localhost:3000/api/v1',
+        description: process.env.NODE_ENV === 'production' 
+          ? 'Servidor de producción'
+          : 'Servidor de desarrollo'
       }
     ],
     components: {
