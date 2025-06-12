@@ -298,7 +298,7 @@ const Services = () => {
                 Agendar Cita
               </Button>
             </Link>
-            <Link to="/contact">
+            <Link to="/contacto">
               <Button size="lg" variant="outline" className="bg-white text-blue-600 hover:bg-blue-50">
                 Contactarnos
               </Button>
