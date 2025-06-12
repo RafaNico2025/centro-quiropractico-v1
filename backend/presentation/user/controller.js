@@ -18,27 +18,42 @@ import { Op } from 'sequelize';
  *         Username:
  *           type: string
  *           description: Nombre de usuario único
+ *           example: "testuser123"
  *         Password:
  *           type: string
  *           description: Contraseña del usuario
+ *           example: "123456"
  *         Nombre:
  *           type: string
  *           description: Nombre del usuario
+ *           example: "Juan"
  *         Apellido:
  *           type: string
  *           description: Apellido del usuario
+ *           example: "Pérez"
  *         Telefono:
  *           type: string
  *           description: Teléfono del usuario
+ *           example: "3513859697"
  *         Email:
  *           type: string
  *           format: email
  *           description: Email del usuario
+ *           example: "juan.perez@example.com"
  *         Role:
  *           type: string
  *           enum: [admin, user, staff]
  *           default: user
  *           description: Rol del usuario
+ *           example: "user"
+ *       example:
+ *         Username: "testuser123"
+ *         Password: "123456"
+ *         Nombre: "Juan"
+ *         Apellido: "Pérez"
+ *         Telefono: "3513859697"
+ *         Email: "juan.perez@example.com"
+ *         Role: "user"
  */
 
 /**
