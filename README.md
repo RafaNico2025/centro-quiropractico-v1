@@ -286,6 +286,9 @@ it('valida campos requeridos', async () => {
   expect(screen.getByLabelText('Motivo')).toBeRequired()
 })
 ```
+### SWAGGER
+- Iniciar el servidor
+- Visita: http://localhost:3000/api-docs
 
 ## 👥 Autores
 

@@ -38,9 +38,7 @@ export const authorizeRole = (roles) => {
   };
 };
 
-export const encryptData = (data) => {
-  // Implementar encriptación de datos sensibles
-  // Por ejemplo, usando crypto-js o bcrypt
+export const encryptData = (data) => { 
   return data; // Placeholder
 };
 

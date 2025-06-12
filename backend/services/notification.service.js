@@ -2,10 +2,11 @@ import nodemailer from 'nodemailer';
 import axios from 'axios';
 import 'dotenv/config';
 
-// Configuración de WhatsApp Cloud API
-const WHATSAPP_API_URL = 'https://graph.facebook.com/v17.0';
-const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+// Configuración de WhatsApp Cloud API, si el cliente lo quiere activar, se debe configurar en el .env y descomentar el codigo
+
+// const WHATSAPP_API_URL = 'https://graph.facebook.com/v17.0';
+// const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
+// const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 
 // Configuración de Nodemailer para Email
 const transporter = nodemailer.createTransport({
