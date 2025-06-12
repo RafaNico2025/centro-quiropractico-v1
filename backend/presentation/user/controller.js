@@ -42,10 +42,10 @@ import { Op } from 'sequelize';
  *           example: "juan.perez@example.com"
  *         Role:
  *           type: string
- *           enum: [admin, user, staff]
- *           default: user
+ *           enum: [admin, patient, staff]
+ *           default: patient
  *           description: Rol del usuario
- *           example: "user"
+ *           example: "patient"
  *       example:
  *         Username: "testuser123"
  *         Password: "123456"
@@ -53,7 +53,7 @@ import { Op } from 'sequelize';
  *         Apellido: "Pérez"
  *         Telefono: "3513859697"
  *         Email: "juan.perez@example.com"
- *         Role: "user"
+ *         Role: "patient"
  */
 
 /**
@@ -179,8 +179,8 @@ const createUser = async (req, res) => {
       return res.status(400).json({ message: 'Faltan campos obligatorios' });
     }
 
-    // Verificar si el usuario ya existe
-    const existingUser = await Users.findOne({ where: { Username } });
+    // Verificar si el usuario ya existe (usando el nombre correcto de columna)
+    const existingUser = await Users.findOne({ where: { username: Username } });
     if (existingUser) {
       return res.status(400).json({ message: 'El nombre de usuario ya existe' });
     }
@@ -189,17 +189,17 @@ const createUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(Password, 10);
 
     const newUser = await Users.create({
-      Username,
-      Password: hashedPassword,
-      Nombre,
-      Apellido,
-      Telefono,
-      Email,
-      Role: Role || 'user' // Rol por defecto
+      username: Username,
+      password: hashedPassword,
+      name: Nombre,
+      lastName: Apellido,
+      phone: Telefono,
+      email: Email,
+      role: Role || 'patient' // Rol por defecto según el modelo
     });
 
     // Excluir la contraseña en la respuesta
-    const { Password: _, ...userWithoutPassword } = newUser.toJSON();
+    const { password: _, ...userWithoutPassword } = newUser.toJSON();
     res.status(201).json(userWithoutPassword);
   } catch (error) {
     console.error('Error al crear usuario:', error);
