@@ -2,29 +2,47 @@ import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Trash2 } from 'lucide-react'
 import { patientService } from '../services/patient.service'
 import { NewPatientForm } from '../components/NewPatientForm'
 import { PatientDetail } from '../components/PatientDetail'
 import { PatientEdit } from '../components/PatientEdit'
+import { useToast } from '../components/ui/use-toast'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog"
 
 export default function Patients() {
   const navigate = useNavigate()
+  const { toast } = useToast()
   const [patients, setPatients] = useState([])
   const [loading, setLoading] = useState(true)
   const [openForm, setOpenForm] = useState(false)
   const [openDetail, setOpenDetail] = useState(false)
   const [openEdit, setOpenEdit] = useState(false)
   const [selectedPatientId, setSelectedPatientId] = useState(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [patientToDelete, setPatientToDelete] = useState(null)
 
   useEffect(() => {
     const fetchPatients = async () => {
       try {
         const data = await patientService.getAll()
         setPatients(data)
-        console.log('Pacientes:', data) // Aquí ves si trae datos
       } catch (error) {
         console.error('Error al obtener pacientes:', error)
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los pacientes",
+          variant: "destructive",
+        })
       } finally {
         setLoading(false)
       }
@@ -36,6 +54,31 @@ export default function Patients() {
   const handleSuccess = () => {
     setLoading(true)
     patientService.getAll().then(setPatients).finally(() => setLoading(false))
+  }
+
+  const handleDeleteClick = (patient) => {
+    setPatientToDelete(patient)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await patientService.delete(patientToDelete.id)
+      toast({
+        title: "Paciente eliminado",
+        description: "El paciente y sus registros relacionados han sido eliminados exitosamente",
+      })
+      handleSuccess() // Recargar la lista
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el paciente",
+        variant: "destructive",
+      })
+    } finally {
+      setDeleteDialogOpen(false)
+      setPatientToDelete(null)
+    }
   }
 
   return (
@@ -56,6 +99,24 @@ export default function Patients() {
         patientId={selectedPatientId}
         onSuccess={handleSuccess}
       />
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará al paciente y todos sus registros relacionados (citas, historial clínico, etc.).
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex items-center justify-between">
         <Button 
             variant="ghost" 
@@ -105,6 +166,13 @@ export default function Patients() {
                         }}
                       >
                         Editar
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => handleDeleteClick(patient)}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>

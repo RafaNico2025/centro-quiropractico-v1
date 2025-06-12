@@ -1,5 +1,7 @@
 import { Patients, Users } from '../../database/connection.database.js';
 import { Op } from 'sequelize';
+import { sequelize } from '../../database/connection.database.js';
+import { Appointments, MedicalHistories, Incomes } from '../../database/connection.database.js';
 
 /**
  * @swagger
@@ -329,8 +331,8 @@ const updatePatient = async (req, res) => {
  *           type: integer
  *         description: ID del paciente
  *     responses:
- *       204:
- *         description: Paciente eliminado exitosamente
+ *       200:
+ *         description: Paciente y sus registros relacionados eliminados exitosamente
  *       404:
  *         description: Paciente no encontrado
  *       500:
@@ -340,14 +342,79 @@ const deletePatient = async (req, res) => {
   try {
     const { id } = req.params;
     const patient = await Patients.findByPk(id);
+    
     if (!patient) {
       return res.status(404).json({ message: 'Paciente no encontrado' });
     }
-    await patient.destroy();
-    res.json({ message: 'Paciente eliminado exitosamente' });
+
+    // Iniciar una transacción para asegurar la integridad de los datos
+    const result = await sequelize.transaction(async (t) => {
+      // 1. Si el paciente tiene una cuenta de usuario, desactivarla
+      if (patient.hasUserAccount) {
+        const user = await Users.findOne({
+          where: {
+            [Op.or]: [
+              { email: patient.email },
+              { username: patient.dni }
+            ]
+          }
+        });
+        if (user) {
+          await user.update({ isActive: false }, { transaction: t });
+        }
+      }
+
+      // 2. Marcar como eliminadas las citas relacionadas
+      await Appointments.update(
+        { deletedAt: new Date() },
+        { 
+          where: { patientId: id },
+          transaction: t 
+        }
+      );
+
+      // 3. Marcar como eliminadas las historias clínicas
+      await MedicalHistories.update(
+        { deletedAt: new Date() },
+        { 
+          where: { patientId: id },
+          transaction: t 
+        }
+      );
+
+      // 4. Marcar como eliminados los ingresos relacionados
+      await Incomes.update(
+        { deletedAt: new Date() },
+        { 
+          where: { patientId: id },
+          transaction: t 
+        }
+      );
+
+      // 5. Finalmente, marcar como eliminado el paciente
+      await patient.destroy({ transaction: t });
+
+      return true;
+    });
+
+    if (result) {
+      res.json({ 
+        message: 'Paciente y sus registros relacionados eliminados exitosamente',
+        details: {
+          patientDeleted: true,
+          userDeactivated: patient.hasUserAccount,
+          appointmentsDeleted: true,
+          medicalHistoriesDeleted: true,
+          incomesDeleted: true
+        }
+      });
+    }
   } catch (error) {
     console.error('Error al eliminar paciente:', error);
-    res.status(500).json({ message: 'Error al eliminar el paciente' });
+    res.status(500).json({ 
+      message: 'Error al eliminar el paciente',
+      error: error.message 
+    });
   }
 };
 
