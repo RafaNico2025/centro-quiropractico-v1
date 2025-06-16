@@ -3,9 +3,19 @@ import { Link } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import WhatsAppButton from '../components/WhatsAppButton'
 import Footer from '../components/Footer'
+import { contactService } from '../services/contact.service'
+import { useToast } from '../components/ui/use-toast'
 
 const Contact = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [formData, setFormData] = useState({
+    nombre: '',
+    email: '',
+    telefono: '',
+    mensaje: ''
+  })
+  const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -13,6 +23,69 @@ const Contact = () => {
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
+  }
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      // Validar campos requeridos
+      if (!formData.nombre.trim() || !formData.email.trim() || !formData.mensaje.trim()) {
+        toast({
+          title: "Error",
+          description: "Por favor completa todos los campos obligatorios",
+          variant: "destructive"
+        })
+        return
+      }
+
+      // Mostrar toast de carga
+      const loadingToast = toast({
+        title: "Enviando mensaje...",
+        description: "Por favor espera mientras procesamos tu mensaje",
+        duration: 3000
+      })
+
+      // Enviar mensaje usando el servicio
+      const response = await contactService.sendMessage(formData)
+
+      // Limpiar formulario
+      setFormData({
+        nombre: '',
+        email: '',
+        telefono: '',
+        mensaje: ''
+      })
+
+      // Mostrar mensaje de éxito
+      toast({
+        title: "¡Mensaje enviado exitosamente!",
+        description: "Nos pondremos en contacto contigo pronto.",
+        duration: 5000
+      })
+
+    } catch (error) {
+      console.error("Error al enviar mensaje:", error)
+      
+      // Mostrar mensaje de error
+      toast({
+        title: "Error al enviar mensaje",
+        description: error.error || error.message || "Hubo un problema al enviar tu mensaje. Por favor intenta de nuevo o contacta por WhatsApp.",
+        variant: "destructive",
+        duration: 8000
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -101,7 +174,7 @@ const Contact = () => {
             {/* Formulario de Contacto */}
             <div className="bg-white p-8 rounded-lg shadow-lg">
               <h2 className="text-3xl font-semibold mb-6 text-gray-800">Envíanos un mensaje</h2>
-              <form className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="block text-gray-700 mb-2" htmlFor="nombre">
                     Nombre completo
@@ -109,8 +182,12 @@ const Contact = () => {
                   <input
                     type="text"
                     id="nombre"
+                    name="nombre"
+                    value={formData.nombre}
+                    onChange={handleChange}
                     className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Tu nombre"
+                    required
                   />
                 </div>
                 <div>
@@ -120,8 +197,12 @@ const Contact = () => {
                   <input
                     type="email"
                     id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
                     className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Tu Email"
+                    required
                   />
                 </div>
                 <div>
@@ -131,6 +212,9 @@ const Contact = () => {
                   <input
                     type="tel"
                     id="telefono"
+                    name="telefono"
+                    value={formData.telefono}
+                    onChange={handleChange}
                     className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Tu número de teléfono"
                   />
@@ -141,16 +225,21 @@ const Contact = () => {
                   </label>
                   <textarea
                     id="mensaje"
+                    name="mensaje"
+                    value={formData.mensaje}
+                    onChange={handleChange}
                     rows="4"
                     className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="¿En qué podemos ayudarte?"
+                    required
                   ></textarea>
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300"
+                  disabled={loading}
+                  className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Enviar mensaje
+                  {loading ? "Enviando..." : "Enviar mensaje"}
                 </button>
               </form>
             </div>
