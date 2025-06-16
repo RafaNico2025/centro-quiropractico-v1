@@ -269,7 +269,11 @@ export function AppointmentForm({ open, onOpenChange, onSuccess, appointment }) 
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+            <Button
+            type="submit" 
+            disabled={loading}
+            aria-label={appointment ? 'Reagendar cita' : 'Nueva cita'}
+            >
               {loading ? 'Procesando...' : appointment ? 'Reagendar' : 'Crear'}
             </Button>
           </DialogFooter>
