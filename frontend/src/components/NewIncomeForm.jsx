@@ -156,10 +156,7 @@ export function NewIncomeForm({ open, onOpenChange, onSuccess }) {
               className="w-full border rounded px-2 py-1"
             >
               <option value="cash">Efectivo</option>
-              <option value="credit_card">Tarjeta de crédito</option>
-              <option value="debit_card">Tarjeta de débito</option>
               <option value="transfer">Transferencia</option>
-              <option value="check">Cheque</option>
               <option value="other">Otro</option>
             </select>
           </div>

@@ -211,7 +211,6 @@ export function AppointmentForm({ open, onOpenChange, onSuccess, appointment }) 
               <Input
                 id="reason"
                 name="reason"
-                required
                 value={formData.reason}
                 onChange={handleChange}
               />
