@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { AppointmentCalendar } from '../components/AppointmentCalendar'
 import { useAuth } from '../context/AuthContext'
+import { NewIncomeForm } from '../components/NewIncomeForm' // Importar el formulario de ingresos
 
 // Componente para mostrar el estado del turno
 const StatusLabel = ({ status }) => {
@@ -41,6 +42,7 @@ export default function Appointments() {
   const [loading, setLoading] = useState(true)
   const [selectedAppointment, setSelectedAppointment] = useState(null)
   const [showForm, setShowForm] = useState(false)
+  const [showIncomeForm, setShowIncomeForm] = useState(false) // Nuevo estado para el formulario de ingresos
   const { toast } = useToast()
   const navigate = useNavigate()
   const [filtroEstado, setFiltroEstado] = useState('')
@@ -66,6 +68,15 @@ export default function Appointments() {
   }
 
   const handleStatusChange = async (appointmentId, newStatus) => {
+    const appointment = appointments.find(a => a.id === appointmentId)
+    const patientName = `${appointment.Patient?.firstName} ${appointment.Patient?.lastName}`
+
+    if (newStatus === 'completed') {
+      setSelectedAppointment(appointment)
+      setShowIncomeForm(true) // Abrir el formulario de ingresos
+      return
+    }
+
     try {
       // Obtener información de la cita
       const appointment = appointments.find(a => a.id === appointmentId)
@@ -248,6 +259,28 @@ export default function Appointments() {
   const handleSelectEvent = (event) => {
     setSelectedAppointment(event.resource)
     setShowForm(true)
+  }
+
+  const handleIncomeFormSuccess = async () => {
+    try {
+      await appointmentService.update(selectedAppointment.id, { status: 'completed' })
+      await loadAppointments()
+      toast({
+        title: "✅ Actualización exitosa",
+        description: `Cita de ${selectedAppointment.Patient?.firstName} ${selectedAppointment.Patient?.lastName} marcada como completada`,
+        duration: 3000
+      })
+    } catch (error) {
+      toast({
+        title: "❌ Error",
+        description: "No se pudo actualizar el estado de la cita. Intenta nuevamente.",
+        variant: "destructive",
+        duration: 5000
+      })
+    } finally {
+      setShowIncomeForm(false)
+      setSelectedAppointment(null)
+    }
   }
 
   if (loading) {
@@ -590,6 +623,12 @@ export default function Appointments() {
         onSuccess={loadAppointments}
         appointment={selectedAppointment}
       />
+
+      <NewIncomeForm
+        open={showIncomeForm}
+        onOpenChange={setShowIncomeForm}
+        onSuccess={handleIncomeFormSuccess} // Confirmar el estado de la cita después de completar el formulario
+      />
     </div>
   )
-} 
+}
