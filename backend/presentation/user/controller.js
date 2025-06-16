@@ -1,6 +1,8 @@
 import { Users, Patients } from '../../database/connection.database.js';
 import bcrypt from 'bcryptjs';
 import { Op } from 'sequelize';
+import crypto from 'crypto';
+import { sendEmailNotification } from '../../services/notification.service.js';
 
 /**
  * @swagger
@@ -539,6 +541,185 @@ const reactivateUser = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Solicitar reset de contraseña
+ *     tags: [Autenticación]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email del usuario
+ *     responses:
+ *       200:
+ *         description: Email de reset enviado
+ *       404:
+ *         description: Usuario no encontrado
+ *       500:
+ *         description: Error del servidor
+ */
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await Users.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ message: 'No existe un usuario con ese email' });
+    }
+
+    // Generar token único
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hora
+
+    // Guardar token en el usuario
+    await user.update({
+      resetPasswordToken: resetToken,
+      resetPasswordExpires: resetTokenExpiry
+    });
+
+    // Crear el enlace de reset
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetLink = `${frontendUrl}/reset-password/${resetToken}`;
+
+    // Template del email
+    const emailTemplate = `
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px; text-align: center; }
+          .content { background: #fff; padding: 20px; border-radius: 5px; }
+          .btn { display: inline-block; padding: 12px 30px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+          .warning { background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107; }
+          .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h2>🔑 Recuperar Contraseña</h2>
+          </div>
+          <div class="content">
+            <p>Hola <strong>${user.name} ${user.lastName}</strong>,</p>
+            
+            <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta en Centro Quiropráctico.</p>
+            
+            <p>Para crear una nueva contraseña, haz clic en el siguiente enlace:</p>
+            
+            <div style="text-align: center;">
+              <a href="${resetLink}" class="btn">🔐 Restablecer Contraseña</a>
+            </div>
+            
+            <div class="warning">
+              <strong>⚠️ Importante:</strong>
+              <ul>
+                <li>Este enlace es válido por <strong>1 hora</strong></li>
+                <li>Si no solicitaste este cambio, ignora este email</li>
+                <li>Tu contraseña actual sigue siendo válida hasta que la cambies</li>
+              </ul>
+            </div>
+            
+            <p>Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
+            <p style="word-break: break-all; color: #666; font-size: 14px;">${resetLink}</p>
+          </div>
+          <div class="footer">
+            <p><strong>Centro Quiropráctico</strong></p>
+            <p>Si tienes problemas, contáctanos: ${process.env.EMAIL_USER}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Enviar email
+    await sendEmailNotification(
+      user.email,
+      'Recuperar Contraseña - Centro Quiropráctico',
+      emailTemplate
+    );
+
+    res.json({ message: 'Se ha enviado un enlace de recuperación a tu email' });
+  } catch (error) {
+    console.error('Error en forgot password:', error);
+    res.status(500).json({ message: 'Error al procesar la solicitud' });
+  }
+};
+
+/**
+ * @swagger
+ * /auth/reset-password:
+ *   post:
+ *     summary: Restablecer contraseña con token
+ *     tags: [Autenticación]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Token de reset
+ *               newPassword:
+ *                 type: string
+ *                 description: Nueva contraseña
+ *     responses:
+ *       200:
+ *         description: Contraseña restablecida exitosamente
+ *       400:
+ *         description: Token inválido o expirado
+ *       500:
+ *         description: Error del servidor
+ */
+const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    const user = await Users.findOne({
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: {
+          [Op.gt]: new Date()
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Token inválido o expirado' });
+    }
+
+    // Hashear la nueva contraseña
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Actualizar contraseña y limpiar tokens
+    await user.update({
+      password: hashedPassword,
+      resetPasswordToken: null,
+      resetPasswordExpires: null
+    });
+
+    res.json({ message: 'Contraseña restablecida exitosamente' });
+  } catch (error) {
+    console.error('Error en reset password:', error);
+    res.status(500).json({ message: 'Error al restablecer la contraseña' });
+  }
+};
+
 export default {
   getUsers,
   getUserById,
@@ -548,5 +729,7 @@ export default {
   reactivateUser,
   changePassword,
   getProfessionals,
-  getPatients
+  getPatients,
+  forgotPassword,
+  resetPassword
 };

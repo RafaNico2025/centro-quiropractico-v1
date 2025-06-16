@@ -10,7 +10,8 @@ const app = express();
 
 const corsOptions = {
   origin: (origin, callback) => {
-    const allowed = process.env.ALLOWED_ORIGINS.split(',');
+    const allowedOrigins = process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000';
+    const allowed = allowedOrigins.split(',');
     if (!origin || allowed.includes(origin)) {
       callback(null, true);
     } else {

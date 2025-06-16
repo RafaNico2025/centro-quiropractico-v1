@@ -47,6 +47,14 @@ const User = (sequelize) =>
     sessionToken: {
       type: DataTypes.STRING,
     },
+    resetPasswordToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    resetPasswordExpires: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     timestamps: true,

@@ -91,6 +91,9 @@ export default function Login() {
         </form>
 
         <div className="flex flex-col items-center space-y-4 mt-4">
+          <Link to="/forgot-password" className="text-sm text-red-600 hover:text-red-500">
+            ¿Olvidaste tu contraseña?
+          </Link>
           <Link to="/register" className="text-sm text-blue-600 hover:text-blue-500">
             ¿No tienes una cuenta? Regístrate
           </Link>

@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Users, Patients } from '../../database/connection.database.js';
+import userController from '../user/controller.js';
 
 /**
  * @swagger
@@ -228,4 +229,7 @@ const login = async (req, res) => {
   }
 };
 
-export { register, login };
+// Importar las funciones desde el controlador de usuarios
+const { forgotPassword, resetPassword } = userController;
+
+export { register, login, forgotPassword, resetPassword };

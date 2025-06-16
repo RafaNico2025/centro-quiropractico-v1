@@ -58,11 +58,36 @@ const isAuthenticated = () => {
   return !!token;
 };
 
+const forgotPassword = async (email) => {
+  try {
+    const response = await axios.post(`${API_URL}/auth/forgot-password`, {
+      email
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Error al solicitar recuperación de contraseña' };
+  }
+};
+
+const resetPassword = async (token, newPassword) => {
+  try {
+    const response = await axios.post(`${API_URL}/auth/reset-password`, {
+      token,
+      newPassword
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Error al restablecer la contraseña' };
+  }
+};
+
 export const authService = {
   login,
   register,
   logout,
   getCurrentUser,
   getToken,
-  isAuthenticated
+  isAuthenticated,
+  forgotPassword,
+  resetPassword
 }; 
