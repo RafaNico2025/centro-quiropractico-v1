@@ -256,7 +256,7 @@ const LandingPage = () => {
               <Button size="lg" variant="secondary">Comenzar Ahora</Button>
             </Link>
             <a 
-              href="https://wa.me/5493516171562" 
+              href="https://wa.me/5493537304294" 
               target="_blank" 
               rel="noopener noreferrer"
             >
@@ -300,7 +300,7 @@ const LandingPage = () => {
                   </svg>
                   <div>
                     <h3 className="font-bold">Email</h3>
-                    <p className="text-gray-600">gonzalocajeao@gmail.com</p>
+                    <p className="text-gray-600">quiropraxiagonzalocajeao@gmail.com</p>
                   </div>
                 </div>
                 <div className="flex items-start">
@@ -339,7 +339,7 @@ const LandingPage = () => {
 
       {/* Botón flotante de WhatsApp */}
       <a
-        href="https://wa.me/5493516171562"
+        href="https://wa.me/5493537304294"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-colors duration-300 z-50"

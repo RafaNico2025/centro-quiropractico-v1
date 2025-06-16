@@ -185,7 +185,7 @@ const Contact = () => {
                     </svg>
                     <div>
                       <h4 className="font-medium text-gray-800">Email</h4>
-                      <p className="text-gray-600">gonzalocajeao@gmail.com</p>
+                      <p className="text-gray-600">quiropraxiagonzalocajeao@gmail.com</p>
                     </div>
                   </div>
                 </div>

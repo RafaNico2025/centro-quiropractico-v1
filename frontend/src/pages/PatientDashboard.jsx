@@ -170,7 +170,7 @@ const PatientDashboard = () => {
     const message = `Hola, soy ${
       user?.name || "un paciente"
     }. Me gustaría solicitar una cita.`;
-    const whatsappUrl = `https://wa.me/5493516171562?text=${encodeURIComponent(
+    const whatsappUrl = `https://wa.me/5493537304294?text=${encodeURIComponent(
       message
     )}`;
     window.open(whatsappUrl, "_blank");
