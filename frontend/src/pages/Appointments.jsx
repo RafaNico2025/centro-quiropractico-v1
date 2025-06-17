@@ -47,6 +47,7 @@ export default function Appointments() {
   const navigate = useNavigate()
   const [filtroEstado, setFiltroEstado] = useState('')
   const { user } = useAuth()
+  const [showCancelledInCalendar, setShowCancelledInCalendar] = useState(false) // Nuevo estado para mostrar canceladas
 
   useEffect(() => {
     loadAppointments()
@@ -59,7 +60,7 @@ export default function Appointments() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "No se pudieron cargar las citas",
+        description: error.message || "No se pudieron cargar las citas",
         variant: "destructive"
       })
     } finally {
@@ -78,10 +79,6 @@ export default function Appointments() {
     }
 
     try {
-      // Obtener información de la cita
-      const appointment = appointments.find(a => a.id === appointmentId)
-      const patientName = `${appointment.Patient?.firstName} ${appointment.Patient?.lastName}`
-      
       // Confirmación para cambios importantes
       let confirmMessage = ''
       let successMessage = ''
@@ -92,7 +89,7 @@ export default function Appointments() {
           successMessage = `Cita de ${patientName} marcada como completada`
           break
         case 'cancelled':
-          confirmMessage = `¿Confirmar cancelación de la cita de ${patientName}?`
+          confirmMessage = `¿Confirmar cancelación de la cita de ${patientName}?\n\nNota: La cita se ocultará del calendario para liberar el horario.`
           successMessage = `Cita de ${patientName} cancelada correctamente`
           break
         case 'no_show':
@@ -123,12 +120,22 @@ export default function Appointments() {
         // Pedir motivo de cancelación
         const cancellationReason = window.prompt('Motivo de cancelación (opcional):') || 'No especificado';
         
-        // Actualizar estado a cancelled (NO eliminar) para que se envíe el email
+        // Actualizar estado a cancelled
         await appointmentService.update(appointmentId, { 
           status: 'cancelled',
           cancellationReason: cancellationReason 
         })
+        
+        // Recargar appointments para reflejar los cambios
         await loadAppointments()
+        
+        // Mostrar mensaje adicional sobre el calendario
+        toast({
+          title: "✅ Cita cancelada",
+          description: `${successMessage}. El horario ahora está disponible en el calendario.`,
+          duration: 4000
+        })
+        return // Salir temprano para evitar el toast duplicado
       } else {
         await appointmentService.update(appointmentId, { status: newStatus })
         await loadAppointments()
@@ -144,7 +151,7 @@ export default function Appointments() {
       console.error('Error al actualizar estado:', error)
       toast({
         title: "❌ Error",
-        description: "No se pudo actualizar el estado de la cita. Intenta nuevamente.",
+        description: error.message || "No se pudo actualizar el estado de la cita. Intenta nuevamente.",
         variant: "destructive",
         duration: 5000
       })
@@ -480,17 +487,29 @@ export default function Appointments() {
       </div>
 
       <div className="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Calendario de Citas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AppointmentCalendar 
-              appointments={appointments}
-              onSelectEvent={handleSelectEvent}
-            />
-          </CardContent>
-        </Card>
+                  <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Calendario de Citas</CardTitle>
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">
+                  Mostrar canceladas:
+                </label>
+                <input
+                  type="checkbox"
+                  checked={showCancelledInCalendar}
+                  onChange={(e) => setShowCancelledInCalendar(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <AppointmentCalendar
+                appointments={appointments}
+                onSelectEvent={handleSelectEvent}
+                showCancelled={showCancelledInCalendar}
+              />
+            </CardContent>
+          </Card>
       </div>
 
       {/* Nueva sección para gestión de todas las citas */}

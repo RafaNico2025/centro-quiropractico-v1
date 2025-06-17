@@ -1,10 +1,10 @@
-import axios from 'axios';
+import api from './api';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 const login = async (username, password) => {
   try {
-    const response = await axios.post(`${API_URL}/auth/login`, {
+    const response = await api.post('/auth/login', {
       username,
       password
     });
@@ -17,17 +17,24 @@ const login = async (username, password) => {
     }
     return response.data.user;
   } catch (error) {
-    console.error('Error en login:', error);
-    throw error.response?.data || { message: 'Error al iniciar sesión' };
+    const errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        error.message || 
+                        'Error al iniciar sesión';
+    throw new Error(errorMessage);
   }
 };
 
 const register = async (userData) => {
   try {
-    const response = await axios.post(`${API_URL}/auth/register`, userData);
+    const response = await api.post('/auth/register', userData);
     return response.data;
   } catch (error) {
-    throw error.response?.data || { message: 'Error al registrar usuario' };
+    const errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        error.message || 
+                        'Error al registrar usuario';
+    throw new Error(errorMessage);
   }
 };
 
@@ -60,24 +67,32 @@ const isAuthenticated = () => {
 
 const forgotPassword = async (email) => {
   try {
-    const response = await axios.post(`${API_URL}/auth/forgot-password`, {
+    const response = await api.post('/auth/forgot-password', {
       email
     });
     return response.data;
   } catch (error) {
-    throw error.response?.data || { message: 'Error al solicitar recuperación de contraseña' };
+    const errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        error.message || 
+                        'Error al solicitar recuperación de contraseña';
+    throw new Error(errorMessage);
   }
 };
 
 const resetPassword = async (token, newPassword) => {
   try {
-    const response = await axios.post(`${API_URL}/auth/reset-password`, {
+    const response = await api.post('/auth/reset-password', {
       token,
       newPassword
     });
     return response.data;
   } catch (error) {
-    throw error.response?.data || { message: 'Error al restablecer la contraseña' };
+    const errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        error.message || 
+                        'Error al restablecer la contraseña';
+    throw new Error(errorMessage);
   }
 };
 

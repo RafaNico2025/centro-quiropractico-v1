@@ -7,7 +7,12 @@ export const appointmentService = {
       const response = await api.get('/appointments', { params: filters });
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      // Mejorar el manejo de errores específicos
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error al obtener las citas';
+      throw new Error(errorMessage);
     }
   },
 
@@ -17,7 +22,11 @@ export const appointmentService = {
       const response = await api.get(`/appointments/${id}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error al obtener la cita';
+      throw new Error(errorMessage);
     }
   },
 
@@ -27,7 +36,11 @@ export const appointmentService = {
       const response = await api.post('/appointments', appointmentData);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error al crear la cita';
+      throw new Error(errorMessage);
     }
   },
 
@@ -40,7 +53,11 @@ export const appointmentService = {
       return response.data;
     } catch (error) {
       console.error('Error en la actualización:', error.response?.data || error.message);
-      throw error.response?.data || error.message;
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error al actualizar la cita';
+      throw new Error(errorMessage);
     }
   },
 
@@ -50,7 +67,11 @@ export const appointmentService = {
       const response = await api.delete(`/appointments/${id}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error al eliminar la cita';
+      throw new Error(errorMessage);
     }
   },
 
@@ -60,7 +81,11 @@ export const appointmentService = {
       const response = await api.post(`/appointments/${id}/send-reminder`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error al enviar recordatorio';
+      throw new Error(errorMessage);
     }
   },
 
@@ -70,7 +95,11 @@ export const appointmentService = {
       const response = await api.post('/appointments/request', appointmentRequestData);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error al solicitar cita';
+      throw new Error(errorMessage);
     }
   }
 }; 

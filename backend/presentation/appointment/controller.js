@@ -77,28 +77,88 @@ const createAppointment = async (req, res) => {
     const { date, startTime, endTime, reason, notes, patientId, professionalId } = req.body;
     const createdBy = req.user.id;
 
+    // Validar campos obligatorios
+    if (!date || !startTime || !endTime || !patientId || !professionalId) {
+      return res.status(400).json({ 
+        error: 'Todos los campos son obligatorios',
+        message: 'Por favor complete: fecha, hora de inicio, hora de fin, paciente y profesional'
+      });
+    }
+
+    // Validar que la fecha no sea en el pasado
+    const appointmentDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (appointmentDate < today) {
+      return res.status(400).json({ 
+        error: 'Fecha inválida',
+        message: 'No se pueden crear citas en fechas pasadas'
+      });
+    }
+
+    // Validar que la hora de fin sea posterior a la de inicio
+    if (startTime >= endTime) {
+      return res.status(400).json({ 
+        error: 'Horario inválido',
+        message: 'La hora de fin debe ser posterior a la hora de inicio'
+      });
+    }
+
+    // Verificar que el paciente existe
+    const patient = await Patients.findByPk(patientId);
+    if (!patient) {
+      return res.status(400).json({ 
+        error: 'Paciente no encontrado',
+        message: 'El paciente seleccionado no existe en el sistema'
+      });
+    }
+
+    // Verificar que el profesional existe
+    const professional = await Users.findByPk(professionalId);
+    if (!professional) {
+      return res.status(400).json({ 
+        error: 'Profesional no encontrado',
+        message: 'El profesional seleccionado no existe en el sistema'
+      });
+    }
+
     // Verificar disponibilidad del horario
     const existingAppointment = await Appointments.findOne({
       where: {
         professionalId,
         date,
+        status: {
+          [Op.not]: 'cancelled' // Excluir citas canceladas
+        },
         [Op.or]: [
+          // Verificar si la nueva cita comienza ANTES de que termine una cita existente
+          // Y termina DESPUÉS de que comience una cita existente
+          // Esto permite que las citas sean consecutivas (una termine cuando otra comience)
           {
-            startTime: {
-              [Op.between]: [startTime, endTime]
-            }
-          },
-          {
-            endTime: {
-              [Op.between]: [startTime, endTime]
-            }
+            [Op.and]: [
+              { startTime: { [Op.lt]: endTime } },     // Cita existente comienza antes de que termine la nueva
+              { endTime: { [Op.gt]: startTime } }      // Cita existente termina después de que comience la nueva
+            ]
           }
         ]
       }
     });
 
     if (existingAppointment) {
-      return res.status(400).json({ error: 'Ya existe un turno en ese horario' });
+      // Obtener información detallada de la cita existente para el mensaje de error
+      const existingPatient = await Patients.findByPk(existingAppointment.patientId, {
+        attributes: ['firstName', 'lastName']
+      });
+      
+      return res.status(400).json({ 
+        error: 'Horario no disponible',
+        message: `Ya existe una cita programada que se superpone con el horario solicitado.\n` +
+                `Cita existente: ${existingAppointment.startTime} - ${existingAppointment.endTime}\n` +
+                `Paciente: ${existingPatient?.firstName} ${existingPatient?.lastName}\n` +
+                `Horario solicitado: ${startTime} - ${endTime}\n\n` +
+                `Sugerencia: Puedes agendar una cita que comience exactamente cuando termine otra (ej: si hay una cita hasta 14:45, puedes agendar desde 14:45).`
+      });
     }
 
     const appointment = await Appointments.create({
@@ -114,7 +174,7 @@ const createAppointment = async (req, res) => {
     });
 
     // Obtener datos del paciente y profesional para las notificaciones
-    const [patient, professional] = await Promise.all([
+    const [patientData, professionalData] = await Promise.all([
       Patients.findByPk(patientId, {
         attributes: ['id', 'firstName', 'lastName', 'phone', 'email']
       }),
@@ -124,7 +184,7 @@ const createAppointment = async (req, res) => {
     ]);
 
     // Enviar notificaciones con todos los datos
-    const notificationResults = await sendAppointmentNotification(appointment, patient, professional);
+    const notificationResults = await sendAppointmentNotification(appointment, patientData, professionalData);
     
     console.log('📧 Resultados de notificación:', notificationResults);
 
@@ -136,7 +196,10 @@ const createAppointment = async (req, res) => {
     res.status(201).json(appointment);
   } catch (error) {
     console.error('Error al crear cita:', error);
-    res.status(500).json({ message: 'Error al crear la cita' });
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      message: 'No se pudo crear la cita. Inténtelo nuevamente más tarde.' 
+    });
   }
 };
 
@@ -361,26 +424,39 @@ const updateAppointment = async (req, res) => {
 
       const existingAppointment = await Appointments.findOne({
         where: {
-          id: { [Op.ne]: id },
+          id: { [Op.ne]: id }, // Excluir la cita actual
           professionalId: newProfessionalId,
           date: newDate,
+          status: {
+            [Op.not]: 'cancelled' // Excluir citas canceladas
+          },
           [Op.or]: [
+            // Verificar si la cita actualizada se superpone con citas existentes
+            // Permitir citas consecutivas (una termine cuando otra comience)
             {
-              startTime: {
-                [Op.between]: [newStartTime, newEndTime]
-              }
-            },
-            {
-              endTime: {
-                [Op.between]: [newStartTime, newEndTime]
-              }
+              [Op.and]: [
+                { startTime: { [Op.lt]: newEndTime } },     // Cita existente comienza antes de que termine la actualizada
+                { endTime: { [Op.gt]: newStartTime } }      // Cita existente termina después de que comience la actualizada
+              ]
             }
           ]
         }
       });
 
       if (existingAppointment) {
-        return res.status(400).json({ error: 'Ya existe un turno en ese horario' });
+        // Obtener información detallada de la cita existente para el mensaje de error
+        const existingPatient = await Patients.findByPk(existingAppointment.patientId, {
+          attributes: ['firstName', 'lastName']
+        });
+        
+        return res.status(400).json({ 
+          error: 'Horario no disponible para la actualización',
+          message: `Ya existe una cita programada que se superpone con el horario solicitado.\n` +
+                  `Cita existente: ${existingAppointment.startTime} - ${existingAppointment.endTime}\n` +
+                  `Paciente: ${existingPatient?.firstName} ${existingPatient?.lastName}\n` +
+                  `Horario solicitado: ${newStartTime} - ${newEndTime}\n\n` +
+                  `Sugerencia: Puedes reagendar para que comience exactamente cuando termine otra cita.`
+        });
       }
     }
 

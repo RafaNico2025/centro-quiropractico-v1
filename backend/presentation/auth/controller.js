@@ -78,19 +78,56 @@ const register = async (req, res) => {
 
     // Validaciones simples
     if (!username || !password || !email || !dni) {
-      return res.status(400).json({ message: 'Faltan campos obligatorios' });
+      return res.status(400).json({ 
+        error: 'Campos obligatorios faltantes',
+        message: 'Por favor complete todos los campos: nombre de usuario, contraseña, email y DNI' 
+      });
     }
 
-    // Chequear si ya existe el usuario
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        error: 'Email inválido',
+        message: 'Por favor ingrese un email válido' 
+      });
+    }
+
+    // Validar longitud de contraseña
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        error: 'Contraseña muy corta',
+        message: 'La contraseña debe tener al menos 6 caracteres' 
+      });
+    }
+
+    // Chequear si ya existe el usuario por username
     const existeUsuario = await Users.findOne({ where: { username } });
-    if (existeUsuario) return res.status(400).json({ message: 'El usuario ya existe' });
+    if (existeUsuario) {
+      return res.status(400).json({ 
+        error: 'Nombre de usuario no disponible',
+        message: 'El nombre de usuario ya está en uso. Por favor elija otro.' 
+      });
+    }
+
+    // Chequear si ya existe el usuario por email
+    const existeEmail = await Users.findOne({ where: { email } });
+    if (existeEmail) {
+      return res.status(400).json({ 
+        error: 'Email ya registrado',
+        message: 'Ya existe una cuenta registrada con este email. ¿Desea iniciar sesión?' 
+      });
+    }
 
     // Verificar si ya existe un paciente con ese DNI
     let pacienteExistente = await Patients.findOne({ where: { dni } });
     
     // Si el paciente existe y ya tiene cuenta de usuario
     if (pacienteExistente && pacienteExistente.hasUserAccount) {
-      return res.status(400).json({ message: 'Ya existe un usuario registrado con ese DNI' });
+      return res.status(400).json({ 
+        error: 'DNI ya registrado',
+        message: 'Ya existe un usuario registrado con este DNI. Si es su cuenta, inicie sesión.' 
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -139,18 +176,53 @@ const register = async (req, res) => {
         await nuevoUsuario.update({ patientId: pacienteFinal.id });
       } catch (error) {
         console.error('Error al crear/actualizar paciente:', error);
-        // No retornamos error aquí para no afectar el registro del usuario
+        // Si hay error con el paciente, eliminamos el usuario creado
+        await nuevoUsuario.destroy();
+        return res.status(500).json({ 
+          error: 'Error al crear perfil de paciente',
+          message: 'No se pudo completar el registro. Inténtelo nuevamente.' 
+        });
       }
     }
 
     res.status(201).json({ 
       message: 'Usuario registrado exitosamente', 
-      user: nuevoUsuario,
+      user: {
+        id: nuevoUsuario.id,
+        username: nuevoUsuario.username,
+        name: nuevoUsuario.name,
+        lastName: nuevoUsuario.lastName,
+        email: nuevoUsuario.email,
+        role: nuevoUsuario.role
+      },
       isExistingPatient: !!pacienteExistente
     });
   } catch (error) {
     console.error('Error en register:', error);
-    res.status(500).json({ message: 'Error al registrar usuario' });
+    
+    // Manejar errores específicos de base de datos
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      const field = error.errors[0].path;
+      let message = 'Ya existe un registro con esos datos';
+      
+      if (field === 'username') {
+        message = 'El nombre de usuario ya está en uso';
+      } else if (field === 'email') {
+        message = 'Ya existe una cuenta con este email';
+      } else if (field === 'dni') {
+        message = 'Ya existe una cuenta con este DNI';
+      }
+      
+      return res.status(400).json({ 
+        error: 'Datos duplicados',
+        message: message 
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      message: 'No se pudo completar el registro. Inténtelo nuevamente más tarde.' 
+    });
   }
 };
 
