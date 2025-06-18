@@ -101,5 +101,24 @@ export const appointmentService = {
                           'Error al solicitar cita';
       throw new Error(errorMessage);
     }
+  },
+
+  // Obtener slots de tiempo disponibles
+  getAvailableSlots: async (date, professionalId = null) => {
+    try {
+      const params = { date };
+      if (professionalId) {
+        params.professionalId = professionalId;
+      }
+      
+      const response = await api.get('/appointments/available-slots', { params });
+      return response.data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error al obtener horarios disponibles';
+      throw new Error(errorMessage);
+    }
   }
 }; 

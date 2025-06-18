@@ -96,11 +96,17 @@ export function AppointmentForm({ open, onOpenChange, onSuccess, appointment }) 
     if (!formData.date) {
       newErrors.date = 'La fecha es obligatoria'
     } else {
-      const appointmentDate = new Date(formData.date)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+      // Usar comparación de strings para evitar problemas de zona horaria
+      const todayString = new Date().toISOString().split('T')[0]
       
-      if (appointmentDate < today) {
+      console.log('🔥 DEBUGGING AppointmentForm - Validación fecha:', {
+        fechaSeleccionada: formData.date,
+        fechaHoy: todayString,
+        comparacion: `"${formData.date}" >= "${todayString}" = ${formData.date >= todayString}`,
+        esValida: formData.date >= todayString
+      })
+      
+      if (formData.date < todayString) {
         newErrors.date = 'No se pueden crear citas en fechas pasadas'
       }
     }

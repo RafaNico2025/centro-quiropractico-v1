@@ -29,8 +29,13 @@ const PatientDashboard = () => {
     preferenciaDia: "",
     preferenciaHora: "",
     notas: "",
+    fechaSeleccionada: "",
+    horarioSeleccionado: ""
   });
   const [editOpen, setEditOpen] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const storedUser = user || JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -87,6 +92,54 @@ const PatientDashboard = () => {
     }
   };
 
+  // Función para cargar slots disponibles
+  const loadAvailableSlots = async (date) => {
+    if (!date) return;
+    
+    setLoadingSlots(true);
+    try {
+      const slotsData = await appointmentService.getAvailableSlots(date);
+      setAvailableSlots(slotsData.slots || []);
+    } catch (error) {
+      console.error("Error al cargar horarios:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los horarios disponibles",
+        variant: "destructive",
+      });
+      setAvailableSlots([]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  // Función para manejar cambio de fecha
+  const handleDateChange = (e) => {
+    const date = e.target.value;
+    setSelectedDate(date);
+    setAppointmentRequest(prev => ({
+      ...prev,
+      fechaSeleccionada: date,
+      horarioSeleccionado: "" // Limpiar horario seleccionado
+    }));
+    
+    // Cargar slots disponibles para la nueva fecha
+    if (date) {
+      loadAvailableSlots(date);
+    } else {
+      setAvailableSlots([]);
+    }
+  };
+
+  // Función para seleccionar un horario
+  const handleSlotSelection = (slot) => {
+    setAppointmentRequest(prev => ({
+      ...prev,
+      horarioSeleccionado: `${slot.startTime} - ${slot.endTime}`,
+      preferenciaHora: `${slot.startTime} - ${slot.endTime}`
+    }));
+  };
+
   // Cargar datos en orden
   useEffect(() => {
     loadUserData();
@@ -103,10 +156,10 @@ const PatientDashboard = () => {
     
     try {
       // Validar que todos los campos requeridos estén completos
-      if (!appointmentRequest.motivo.trim() || !appointmentRequest.preferenciaDia.trim() || !appointmentRequest.preferenciaHora.trim()) {
+      if (!appointmentRequest.motivo.trim() || !appointmentRequest.fechaSeleccionada || !appointmentRequest.horarioSeleccionado) {
         toast({
           title: "Error",
-          description: "Por favor completa todos los campos obligatorios",
+          description: "Por favor completa el motivo, selecciona una fecha y elige un horario disponible",
           variant: "destructive",
         });
         return;
@@ -119,8 +172,18 @@ const PatientDashboard = () => {
         duration: 3000,
       });
 
+      // Preparar datos de la solicitud con el horario específico seleccionado
+      const requestData = {
+        motivo: appointmentRequest.motivo,
+        preferenciaDia: appointmentRequest.fechaSeleccionada,
+        preferenciaHora: appointmentRequest.horarioSeleccionado,
+        notas: appointmentRequest.notas,
+        fechaSeleccionada: appointmentRequest.fechaSeleccionada,
+        horarioSeleccionado: appointmentRequest.horarioSeleccionado
+      };
+
       // Enviar solicitud usando el servicio
-      const response = await appointmentService.requestAppointment(appointmentRequest);
+      const response = await appointmentService.requestAppointment(requestData);
       
       // Cerrar formulario
       setShowAppointmentForm(false);
@@ -131,12 +194,16 @@ const PatientDashboard = () => {
         preferenciaDia: "",
         preferenciaHora: "",
         notas: "",
+        fechaSeleccionada: "",
+        horarioSeleccionado: ""
       });
+      setSelectedDate("");
+      setAvailableSlots([]);
 
       // Mostrar mensaje de éxito
       toast({
         title: "¡Solicitud enviada exitosamente!",
-        description: response.message || "Nos pondremos en contacto contigo pronto para confirmar tu cita.",
+        description: response.message || "Nos pondremos en contacto contigo pronto para confirmar tu cita en el horario seleccionado.",
         duration: 5000,
       });
 
@@ -353,33 +420,59 @@ const PatientDashboard = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Preferencia de Día
+                        Fecha Preferida
                       </label>
                       <input
-                        type="text"
-                        name="preferenciaDia"
-                        value={appointmentRequest.preferenciaDia}
-                        onChange={handleChange}
+                        type="date"
+                        value={selectedDate}
+                        onChange={handleDateChange}
+                        min={new Date().toISOString().split('T')[0]}
                         className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Ej: Lunes a Viernes"
                         required
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Preferencia de Hora
-                      </label>
-                      <input
-                        type="text"
-                        name="preferenciaHora"
-                        value={appointmentRequest.preferenciaHora}
-                        onChange={handleChange}
-                        className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Ej: Mañana o Tarde"
-                        required
-                      />
-                    </div>
+                    {selectedDate && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Horarios Disponibles
+                        </label>
+                        {loadingSlots ? (
+                          <div className="flex items-center justify-center p-4 text-gray-500">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mr-2"></div>
+                            Cargando horarios...
+                          </div>
+                        ) : availableSlots.length > 0 ? (
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {availableSlots.map((slot, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                onClick={() => handleSlotSelection(slot)}
+                                className={`p-2 text-sm border rounded-md transition-colors ${
+                                  appointmentRequest.horarioSeleccionado === `${slot.startTime} - ${slot.endTime}`
+                                    ? 'bg-blue-500 text-white border-blue-500'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-300'
+                                }`}
+                              >
+                                {slot.startTime} - {slot.endTime}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-gray-500 p-4 text-center border rounded-md bg-gray-50">
+                            No hay horarios disponibles para esta fecha. 
+                            Por favor selecciona otra fecha.
+                          </p>
+                        )}
+                        
+                        {appointmentRequest.horarioSeleccionado && (
+                          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
+                            ✓ Horario seleccionado: {appointmentRequest.horarioSeleccionado}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -391,17 +484,42 @@ const PatientDashboard = () => {
                         onChange={handleChange}
                         className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         rows="2"
+                        placeholder="Información adicional sobre tu consulta..."
                       />
                     </div>
 
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                      <p className="text-sm text-blue-700">
+                        <strong>Importante:</strong> Esta es una solicitud de cita. 
+                        El centro quiropráctico se pondrá en contacto contigo para 
+                        confirmar la disponibilidad del horario seleccionado.
+                      </p>
+                    </div>
+
                     <div className="flex space-x-4">
-                      <Button type="submit" className="flex-1">
+                      <Button 
+                        type="submit" 
+                        className="flex-1"
+                        disabled={!appointmentRequest.motivo.trim() || !selectedDate || !appointmentRequest.horarioSeleccionado}
+                      >
                         Enviar Solicitud
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setShowAppointmentForm(false)}
+                        onClick={() => {
+                          setShowAppointmentForm(false);
+                          setSelectedDate("");
+                          setAvailableSlots([]);
+                          setAppointmentRequest({
+                            motivo: "",
+                            preferenciaDia: "",
+                            preferenciaHora: "",
+                            notas: "",
+                            fechaSeleccionada: "",
+                            horarioSeleccionado: ""
+                          });
+                        }}
                         className="flex-1"
                       >
                         Cancelar

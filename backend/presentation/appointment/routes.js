@@ -1,4 +1,4 @@
-import { createAppointment, getAppointments, getAppointmentById, updateAppointment, deleteAppointment, sendAppointmentReminderManual, requestAppointment } from './controller.js';
+import { createAppointment, getAppointments, getAppointmentById, updateAppointment, deleteAppointment, sendAppointmentReminderManual, requestAppointment, getAvailableSlots } from './controller.js';
 import { Router } from 'express';
 import { authenticateToken } from '../auth/middleware.js';
 
@@ -7,6 +7,7 @@ const router = Router();
 // Rutas protegidas con autenticación
 router.post('/', authenticateToken, createAppointment);
 router.get('/', authenticateToken, getAppointments);
+router.get('/available-slots', authenticateToken, getAvailableSlots);
 router.get('/:id', authenticateToken, getAppointmentById);
 router.put('/:id', authenticateToken, updateAppointment);
 router.delete('/:id', authenticateToken, deleteAppointment);

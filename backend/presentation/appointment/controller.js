@@ -85,17 +85,30 @@ const createAppointment = async (req, res) => {
       });
     }
 
-    // Validar que la fecha no sea en el pasado
-    const appointmentDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Validar que la fecha no sea en el pasado - usando comparación de strings para evitar problemas de zona horaria
+    const now = new Date();
+    const todayString = now.toISOString().split('T')[0]; // Formato YYYY-MM-DD
     
-    if (appointmentDate < today) {
+    console.log('🔥 DEBUGGING createAppointment - Validación fecha:', {
+      fechaRecibida: date,
+      fechaRecibidaTipo: typeof date,
+      fechaHoyString: todayString,
+      fechaHoyTipo: typeof todayString,
+      ahora: now.toString(),
+      comparacion: `"${date}" >= "${todayString}" = ${date >= todayString}`,
+      esFechaValida: date >= todayString
+    });
+    
+    // Permitir la fecha de hoy y fechas futuras
+    if (date < todayString) {
+      console.error('❌ Fecha rechazada:', { date, todayString, motivo: 'fecha en el pasado' });
       return res.status(400).json({ 
         error: 'Fecha inválida',
-        message: 'No se pueden crear citas en fechas pasadas'
+        message: `No se pueden crear citas en fechas pasadas. Fecha recibida: ${date}, Fecha hoy: ${todayString}`
       });
     }
+    
+    console.log('✅ Fecha validada correctamente:', date);
 
     // Validar que la hora de fin sea posterior a la de inicio
     if (startTime >= endTime) {
@@ -668,7 +681,7 @@ const sendAppointmentReminderManual = async (req, res) => {
  */
 const requestAppointment = async (req, res) => {
   try {
-    const { motivo, preferenciaDia, preferenciaHora, notas } = req.body;
+    const { motivo, preferenciaDia, preferenciaHora, notas, fechaSeleccionada, horarioSeleccionado } = req.body;
     const userId = req.user.id;
 
     // Obtener datos del usuario que solicita la cita
@@ -680,23 +693,30 @@ const requestAppointment = async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    // Crear el objeto de solicitud de cita
+    // Crear el objeto de solicitud de cita con información detallada del horario
     const appointmentRequest = {
       motivo,
-      preferenciaDia,
-      preferenciaHora,
+      preferenciaDia: fechaSeleccionada || preferenciaDia,
+      preferenciaHora: horarioSeleccionado || preferenciaHora,
       notas: notas || '',
+      fechaSeleccionada: fechaSeleccionada || null,
+      horarioSeleccionado: horarioSeleccionado || null,
       solicitadoPor: `${user.name} ${user.lastName}`,
       emailSolicitante: user.email,
-      telefonoSolicitante: user.phone
+      telefonoSolicitante: user.phone,
+      tipoSolicitud: fechaSeleccionada && horarioSeleccionado ? 'horario_especifico' : 'preferencia_general'
     };
 
     // Enviar notificación por email al centro quiropráctico
     const notificationResult = await sendAppointmentRequest(appointmentRequest);
 
     if (notificationResult.success) {
+      const successMessage = fechaSeleccionada && horarioSeleccionado 
+        ? `Solicitud de cita enviada exitosamente para el ${fechaSeleccionada} en el horario ${horarioSeleccionado}. Nos pondremos en contacto contigo pronto para confirmar la disponibilidad.`
+        : 'Solicitud de cita enviada exitosamente. Nos pondremos en contacto contigo pronto.';
+        
       res.status(200).json({ 
-        message: 'Solicitud de cita enviada exitosamente. Nos pondremos en contacto contigo pronto.',
+        message: successMessage,
         solicitud: appointmentRequest
       });
     } else {
@@ -712,6 +732,244 @@ const requestAppointment = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /appointments/available-slots:
+ *   get:
+ *     summary: Obtener slots de tiempo disponibles para reservar citas
+ *     tags: [Citas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Fecha para consultar disponibilidad (formato YYYY-MM-DD)
+ *       - in: query
+ *         name: professionalId
+ *         schema:
+ *           type: integer
+ *         description: ID del profesional (opcional, si no se especifica muestra todos)
+ *     responses:
+ *       200:
+ *         description: Lista de slots disponibles
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   date:
+ *                     type: string
+ *                     format: date
+ *                   startTime:
+ *                     type: string
+ *                     format: time
+ *                   endTime:
+ *                     type: string
+ *                     format: time
+ *                   available:
+ *                     type: boolean
+ *                   professionalId:
+ *                     type: integer
+ *                   professionalName:
+ *                     type: string
+ *       400:
+ *         description: Error en la solicitud
+ *       500:
+ *         description: Error del servidor
+ */
+const getAvailableSlots = async (req, res) => {
+  try {
+    const { date, professionalId } = req.query;
+    console.log('🔍 getAvailableSlots - Parámetros recibidos:', { date, professionalId });
+    
+    // Si no se proporciona fecha, usar la fecha actual
+    const targetDate = date || new Date().toISOString().split('T')[0];
+    console.log('📅 Fecha objetivo:', targetDate);
+    
+    // Validar que la fecha no sea en el pasado - usando comparación de strings para evitar problemas de zona horaria
+    const todayString = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    
+    console.log('📅 Comparación de fechas:', {
+      targetDate,
+      todayString,
+      comparison: targetDate >= todayString ? 'válida' : 'pasada'
+    });
+    
+    // Permitir la fecha de hoy y fechas futuras
+    if (targetDate < todayString) {
+      return res.status(400).json({ 
+        error: 'Fecha inválida',
+        message: 'No se pueden consultar slots en fechas pasadas'
+      });
+    }
+
+    console.log('🔄 Paso 1: Validación de fecha completada');
+
+    // Obtener profesionales disponibles
+    let professionals = [];
+    try {
+      if (professionalId) {
+        console.log('🔍 Buscando profesional específico ID:', professionalId);
+        const professional = await Users.findByPk(professionalId, {
+          attributes: ['id', 'name', 'lastName'],
+          where: { isActive: true }
+        });
+        if (professional) {
+          professionals = [professional];
+        } else {
+          return res.status(404).json({ 
+            error: 'Profesional no encontrado',
+            message: 'El profesional especificado no existe o no está activo'
+          });
+        }
+      } else {
+        console.log('🔍 Buscando todos los profesionales activos');
+        // Obtener todos los profesionales (usuarios con rol admin o staff)
+        professionals = await Users.findAll({
+          where: {
+            role: ['admin', 'staff'],
+            isActive: true
+          },
+          attributes: ['id', 'name', 'lastName']
+        });
+      }
+    } catch (dbError) {
+      console.error('❌ Error en consulta de profesionales:', dbError);
+      return res.status(500).json({ 
+        error: 'Error de base de datos',
+        message: 'No se pudieron obtener los profesionales'
+      });
+    }
+
+    if (professionals.length === 0) {
+      return res.status(404).json({ 
+        error: 'No hay profesionales disponibles',
+        message: 'No se encontraron profesionales activos en el sistema'
+      });
+    }
+
+    console.log('✅ Paso 2: Profesionales encontrados:', professionals.map(p => ({ id: p.id, name: `${p.name} ${p.lastName}` })));
+
+    // Horario de atención (7:00 AM a 8:00 PM)
+    const workingHours = {
+      start: '07:00',
+      end: '20:00'
+    };
+
+    // Generar slots de 15 minutos - versión simplificada
+    const timeSlots = [];
+    const startHour = 7;
+    const endHour = 20;
+    
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const startTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const endMinute = minute + 15;
+        const endTimeHour = endMinute >= 60 ? hour + 1 : hour;
+        const endTimeMinute = endMinute >= 60 ? endMinute - 60 : endMinute;
+        const endTime = `${endTimeHour.toString().padStart(2, '0')}:${endTimeMinute.toString().padStart(2, '0')}`;
+        
+        if (endTimeHour <= endHour) {
+          timeSlots.push({
+            startTime,
+            endTime
+          });
+        }
+      }
+    }
+    
+    console.log('✅ Paso 3: Slots generados:', timeSlots.length);
+    
+    if (timeSlots.length === 0) {
+      return res.status(500).json({ 
+        error: 'Error generando horarios',
+        message: 'No se pudieron generar los slots de tiempo'
+      });
+    }
+
+    const availableSlots = [];
+
+    // Para cada profesional, verificar disponibilidad
+    for (const professional of professionals) {
+      console.log(`🔍 Paso 4: Verificando disponibilidad para: ${professional.name} ${professional.lastName} (ID: ${professional.id})`);
+      
+      try {
+        // Obtener citas existentes para este profesional en la fecha seleccionada
+        const existingAppointments = await Appointments.findAll({
+          where: {
+            professionalId: professional.id,
+            date: targetDate,
+            status: {
+              [Op.not]: 'cancelled'
+            }
+          },
+          attributes: ['startTime', 'endTime']
+        });
+
+        console.log(`📅 Citas existentes para ${professional.name}:`, existingAppointments.length);
+
+        // Verificar cada slot
+        for (const slot of timeSlots) {
+          const isAvailable = !existingAppointments.some(appointment => {
+            // Verificar si hay conflicto con citas existentes
+            return (
+              (slot.startTime < appointment.endTime && slot.endTime > appointment.startTime)
+            );
+          });
+
+          availableSlots.push({
+            date: targetDate,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            available: isAvailable,
+            professionalId: professional.id,
+            professionalName: `${professional.name} ${professional.lastName}`
+          });
+        }
+      } catch (apptError) {
+        console.error(`❌ Error consultando citas para profesional ${professional.id}:`, apptError);
+        // Continuar con el siguiente profesional
+        continue;
+      }
+    }
+
+    // Filtrar solo los slots disponibles y ordenar por hora
+    const onlyAvailableSlots = availableSlots
+      .filter(slot => slot.available)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    console.log('✅ Paso 5: Slots disponibles encontrados:', onlyAvailableSlots.length);
+    console.log('📊 Resumen final:', {
+      fecha: targetDate,
+      totalSlots: availableSlots.length,
+      slotsDisponibles: onlyAvailableSlots.length,
+      profesionales: professionals.length
+    });
+
+    res.json({
+      date: targetDate,
+      slots: onlyAvailableSlots,
+      totalAvailable: onlyAvailableSlots.length,
+      totalProfessionals: professionals.length,
+      totalSlots: availableSlots.length
+    });
+
+  } catch (error) {
+    console.error('❌ Error al obtener slots disponibles:', error);
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      message: 'No se pudieron obtener los horarios disponibles',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 export {
   createAppointment,
   getAppointments,
@@ -719,5 +977,6 @@ export {
   updateAppointment,
   deleteAppointment,
   sendAppointmentReminderManual,
-  requestAppointment
+  requestAppointment,
+  getAvailableSlots
 }; 

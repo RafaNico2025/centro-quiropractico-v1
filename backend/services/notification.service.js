@@ -483,11 +483,22 @@ ${reason ? `📝 Motivo: ${reason}` : ''}
 // Función para enviar solicitud de cita desde dashboard del paciente
 export const sendAppointmentRequest = async (appointmentRequest) => {
   try {
-    const { motivo, preferenciaDia, preferenciaHora, notas, solicitadoPor, emailSolicitante, telefonoSolicitante } = appointmentRequest;
+    const { 
+      motivo, 
+      preferenciaDia, 
+      preferenciaHora, 
+      notas, 
+      solicitadoPor, 
+      emailSolicitante, 
+      telefonoSolicitante,
+      fechaSeleccionada,
+      horarioSeleccionado,
+      tipoSolicitud
+    } = appointmentRequest;
     
     // Template de email para el centro quiropráctico
     const emailTemplate = {
-      subject: '📋 Nueva Solicitud de Cita - Dashboard Paciente',
+      subject: `📋 Nueva Solicitud de Cita ${tipoSolicitud === 'horario_especifico' ? '- HORARIO ESPECÍFICO SOLICITADO' : '- Dashboard Paciente'}`,
       html: `
         <!DOCTYPE html>
         <html lang="es">
@@ -507,7 +518,9 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
             .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px; }
             .btn { display: inline-block; background: #007bff; color: white !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 10px 5px; font-weight: bold; font-size: 16px; }
             .urgent { background: #dc3545; color: white; padding: 15px; border-radius: 8px; margin: 15px 0; font-weight: bold; }
+            .urgent-specific { background: #ff6b35; color: white; padding: 15px; border-radius: 8px; margin: 15px 0; font-weight: bold; }
             .patient-info { background: #e7f3ff; padding: 15px; border-left: 4px solid #007bff; border-radius: 4px; margin: 15px 0; }
+            .specific-request { background: #fff9e6; border: 2px solid #ffc107; padding: 20px; border-radius: 8px; margin: 20px 0; }
           </style>
         </head>
         <body>
@@ -517,9 +530,30 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
           </div>
           
           <div class="content">
+            ${tipoSolicitud === 'horario_especifico' ? `
+            <div class="urgent-specific">
+              🎯 HORARIO ESPECÍFICO: El paciente seleccionó un horario disponible del sistema
+            </div>
+            
+            <div class="specific-request">
+              <h3>⭐ SOLICITUD CON HORARIO ESPECÍFICO</h3>
+              <p><strong>📅 Fecha solicitada:</strong> ${new Date(fechaSeleccionada).toLocaleDateString('es-ES', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</p>
+              <p><strong>🕐 Horario solicitado:</strong> ${horarioSeleccionado}</p>
+              <p style="color: #856404; font-weight: bold; margin-top: 15px;">
+                ⚡ ACCIÓN PRIORITARIA: Este horario estaba disponible cuando el paciente lo seleccionó. 
+                Revisar disponibilidad y confirmar lo antes posible.
+              </p>
+            </div>
+            ` : `
             <div class="urgent">
               🚨 ACCIÓN REQUERIDA: Un paciente ha solicitado una cita desde el dashboard
             </div>
+            `}
             
             <div class="patient-info">
               <h3>👤 Información del Solicitante:</h3>
@@ -535,6 +569,16 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
                 <span class="label">🩺 Motivo de Consulta:</span>
                 <span class="value">${motivo}</span>
               </div>
+              ${tipoSolicitud === 'horario_especifico' ? `
+              <div class="detail-row">
+                <span class="label">📅 Fecha Específica:</span>
+                <span class="value">${fechaSeleccionada} (${new Date(fechaSeleccionada).toLocaleDateString('es-ES', { weekday: 'long' })})</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">🕐 Horario Específico:</span>
+                <span class="value">${horarioSeleccionado}</span>
+              </div>
+              ` : `
               <div class="detail-row">
                 <span class="label">📅 Preferencia de Día:</span>
                 <span class="value">${preferenciaDia}</span>
@@ -543,6 +587,7 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
                 <span class="label">🕐 Preferencia de Hora:</span>
                 <span class="value">${preferenciaHora}</span>
               </div>
+              `}
               ${notas ? `
               <div class="detail-row">
                 <span class="label">📝 Notas Adicionales:</span>
@@ -579,7 +624,7 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
 
     // Email de confirmación para el paciente
     const patientEmailTemplate = {
-      subject: '✅ Solicitud de Cita Recibida - Centro Quiropráctico',
+      subject: `✅ Solicitud de Cita Recibida ${tipoSolicitud === 'horario_especifico' ? '- Horario Específico Solicitado' : ''} - Centro Quiropráctico`,
       html: `
         <!DOCTYPE html>
         <html lang="es">
@@ -592,6 +637,7 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
             .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
             .confirmation { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .specific-confirmation { background: #fff9e6; border: 2px solid #ffc107; color: #856404; padding: 20px; border-radius: 8px; margin: 20px 0; }
             .next-steps { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 20px; border-radius: 8px; margin: 20px 0; }
             .btn { display: inline-block; background: #28a745; color: white !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 10px 5px; font-weight: bold; }
           </style>
@@ -605,6 +651,27 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
           <div class="content">
             <p>Estimado/a <strong>${solicitadoPor}</strong>,</p>
             
+            ${tipoSolicitud === 'horario_especifico' ? `
+            <div class="specific-confirmation">
+              <h3>🎯 ¡Solicitud con horario específico recibida!</h3>
+              <p>Hemos recibido su solicitud de cita con el horario específico que seleccionó:</p>
+              <ul style="margin-left: 20px;">
+                <li><strong>📅 Fecha solicitada:</strong> ${new Date(fechaSeleccionada).toLocaleDateString('es-ES', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}</li>
+                <li><strong>🕐 Horario solicitado:</strong> ${horarioSeleccionado}</li>
+                <li><strong>🩺 Motivo:</strong> ${motivo}</li>
+                ${notas ? `<li><strong>📝 Notas:</strong> ${notas}</li>` : ''}
+              </ul>
+              <p style="font-weight: bold; margin-top: 15px;">
+                ⚡ <strong>Importante:</strong> Este horario estaba disponible cuando usted lo seleccionó. 
+                Nos pondremos en contacto con usted en las próximas horas para confirmar la disponibilidad.
+              </p>
+            </div>
+            ` : `
             <div class="confirmation">
               <h3>✅ ¡Su solicitud ha sido recibida exitosamente!</h3>
               <p>Hemos recibido su solicitud de cita con los siguientes detalles:</p>
@@ -615,15 +682,25 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
                 ${notas ? `<li><strong>Notas:</strong> ${notas}</li>` : ''}
               </ul>
             </div>
+            `}
 
             <div class="next-steps">
               <h4>📞 ¿Qué sigue ahora?</h4>
+              ${tipoSolicitud === 'horario_especifico' ? `
+              <ol>
+                <li><strong>Verificación rápida:</strong> Confirmaremos que el horario sigue disponible</li>
+                <li><strong>Contacto prioritario:</strong> Nos comunicaremos con usted en las próximas 2-4 horas</li>
+                <li><strong>Confirmación:</strong> Si está disponible, confirmaremos su cita inmediatamente</li>
+                <li><strong>Alternativas:</strong> Si no está disponible, le ofreceremos horarios similares</li>
+              </ol>
+              ` : `
               <ol>
                 <li>Revisaremos su solicitud y disponibilidad</li>
                 <li>Nos contactaremos con usted en las próximas 24 horas</li>
                 <li>Confirmaremos fecha y hora específica</li>
                 <li>Le enviaremos la confirmación final</li>
               </ol>
+              `}
             </div>
 
             <p>Si necesita contactarnos urgentemente o hacer cambios a su solicitud, puede:</p>
