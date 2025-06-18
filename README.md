@@ -170,6 +170,10 @@ npm run dev
 - **Backend API**: [https://centro-quiropractico-v1.onrender.com/api/v1](https://centro-quiropractico-v1.onrender.com/api/v1)
 - **Documentación API**: [https://centro-quiropractico-v1.onrender.com/api-docs/#/](https://centro-quiropractico-v1.onrender.com/api-docs/#/)
 
+### Ingreso como Administrador:
+Usuario: admin
+Contraseña: admin123
+
 ## 📖 Estructura del Proyecto
 
 ### Backend
