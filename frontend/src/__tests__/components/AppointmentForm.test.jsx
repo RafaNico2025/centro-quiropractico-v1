@@ -38,10 +38,10 @@ describe("AppointmentForm", () => {
     render(<AppointmentForm {...defaultProps} />);
 
     expect(await screen.findByText("Nueva Cita")).toBeInTheDocument();
-    expect(screen.getByLabelText("Fecha")).toBeInTheDocument();
-    expect(screen.getByLabelText("Hora de inicio")).toBeInTheDocument();
-    expect(screen.getByLabelText("Hora de fin")).toBeInTheDocument();
-    expect(screen.getByLabelText("Motivo")).toBeInTheDocument();
+    expect(screen.getByLabelText("Fecha *", { selector: "#date" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^hora de inicio \*$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^hora de fin \*$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^motivo \*$/i)).toBeInTheDocument();
   });
 
   it("muestra título diferente cuando es para reagendar", async () => {
@@ -69,9 +69,9 @@ describe("AppointmentForm", () => {
     // Esperar a que desaparezca el loader
     await waitForElementToBeRemoved(() => screen.getByText(/cargando/i));
 
-    expect(screen.getByLabelText("Fecha")).toHaveValue("");
-    expect(screen.getByLabelText("Hora de inicio")).toHaveValue("");
-    expect(screen.getByLabelText("Hora de fin")).toHaveValue("");
-    expect(screen.getByLabelText("Motivo")).toHaveValue("");
+    expect(screen.getByLabelText(/^fecha \*$/i)).toHaveValue("");
+    expect(screen.getByLabelText(/^hora de inicio \*$/i)).toHaveValue("");
+    expect(screen.getByLabelText(/^hora de fin \*$/i)).toHaveValue("");
+    expect(screen.getByLabelText(/^motivo \*$/i)).toHaveValue("");
   });
 });
