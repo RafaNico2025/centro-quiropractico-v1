@@ -371,7 +371,7 @@ export default function Appointments() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {appointment.status === 'scheduled' && (
+                    {(appointment.status === 'scheduled' || appointment.status === 'rescheduled') && (
                       <>
                         <Button 
                           size="sm"
@@ -379,6 +379,14 @@ export default function Appointments() {
                           onClick={() => handleStatusChange(appointment.id, 'completed')}
                         >
                           ✓ Atendido
+                        </Button>
+                        <Button 
+                          size="sm"
+                          variant="outline" 
+                          className="border-blue-500 text-blue-700 hover:bg-blue-50"
+                          onClick={() => handleStatusChange(appointment.id, 'rescheduled')}
+                        >
+                          📅 Reagendar
                         </Button>
                         <Button 
                           size="sm"

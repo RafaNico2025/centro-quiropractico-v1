@@ -91,7 +91,7 @@ const emailTemplates = {
             </div>
             <div class="detail-row">
               <span class="label">🕐 Hora:</span>
-              <span class="value">${appointment.startTime} - ${appointment.endTime}</span>
+              <span class="value">${appointment.startTime.slice(0, 5)} - ${appointment.endTime.slice(0, 5)}</span>
             </div>
             <div class="detail-row">
               <span class="label">👨‍⚕️ Profesional:</span>
@@ -125,6 +125,104 @@ const emailTemplates = {
           <p>Dirección del centro | Teléfono: +54 353 730 4294</p>
           <p style="font-size: 12px; color: #999;">
             Este email fue enviado a ${patient.email} porque solicitó un turno en nuestro centro.
+            Si no debería recibir estos emails, contáctenos.
+          </p>
+        </div>
+      </body>
+      </html>
+    `
+  }),
+
+  appointmentRescheduled: (appointment, patient, professional) => ({
+    subject: '🔄 Turno Reagendado - Centro Quiropráctico',
+    html: `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Turno Reagendado</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+          .appointment-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+          .detail-row:last-child { border-bottom: none; }
+          .label { font-weight: bold; color: #555; }
+          .value { color: #333; }
+          .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px; }
+          .btn { display: inline-block; background: #007bff; color: black !important; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 10px 5px; font-weight: bold; font-size: 16px; box-shadow: 0 2px 6px rgba(0,123,255,0.3); transition: background-color 0.3s; }
+          .btn:hover { background: #0056b3; color: black !important; }
+          .btn-secondary { background: #28a745; color: black !important; box-shadow: 0 2px 6px rgba(40,167,69,0.3); }
+          .btn-secondary:hover { background: #1e7e34; color: black !important; }
+          .highlight { background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; border-radius: 4px; margin: 15px 0; }
+          .personal { background: #e7f3ff; padding: 10px; border-radius: 4px; margin: 10px 0; font-style: italic; }
+          .important { background: #ffe6e6; padding: 15px; border-left: 4px solid #dc3545; border-radius: 4px; margin: 15px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>🏥 Centro Quiropráctico</h1>
+          <h2>Turno Reagendado</h2>
+        </div>
+        
+        <div class="content">
+          <p>Estimado/a <strong>${patient.firstName} ${patient.lastName}</strong>,</p>
+          
+          <div class="important">
+            <strong>🔄 Su turno ha sido reagendado</strong><br>
+            Hemos modificado el horario de su cita. Por favor, tome nota de los nuevos detalles.
+          </div>
+          
+          <p>Aquí están los <strong>nuevos detalles</strong> de su turno:</p>
+          
+          <div class="appointment-details">
+            <div class="detail-row">
+              <span class="label">📅 Nueva Fecha:</span>
+              <span class="value">${new Date(appointment.date).toLocaleDateString('es-ES', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">🕐 Nuevo Horario:</span>
+              <span class="value">${appointment.startTime.slice(0, 5)} - ${appointment.endTime.slice(0, 5)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">👨‍⚕️ Profesional:</span>
+              <span class="value">Dr. ${professional.name} ${professional.lastName}</span>
+            </div>
+            ${appointment.reason ? `
+            <div class="detail-row">
+              <span class="label">📋 Motivo:</span>
+              <span class="value">${appointment.reason}</span>
+            </div>
+            ` : ''}
+          </div>
+
+          <div class="highlight">
+            <strong>⚠️ Importante:</strong> Por favor confirme que puede asistir en el nuevo horario. Si no puede asistir, le pedimos que nos contacte lo antes posible para poder ofrecer el horario a otros pacientes.
+          </div>
+
+          <div class="personal">
+            Disculpe las molestias ocasionadas. Su bienestar sigue siendo nuestra prioridad y nos esforzamos por brindarle la mejor atención posible.
+          </div>
+
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="tel:+5493537304294" class="btn">📞 Confirmar Asistencia</a>
+            <a href="mailto:${process.env.EMAIL_USER}" class="btn btn-secondary">✉️ Solicitar Cambio</a>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p><strong>Centro Quiropráctico</strong></p>
+          <p>Cuidando su salud con profesionalismo y dedicación</p>
+          <p>Dirección del centro | Teléfono: +54 353 730 4294</p>
+          <p style="font-size: 12px; color: #999;">
+            Este email fue enviado a ${patient.email} porque su turno fue reagendado.
             Si no debería recibir estos emails, contáctenos.
           </p>
         </div>
@@ -181,7 +279,7 @@ const emailTemplates = {
             </div>
             <div class="detail-row">
               <span class="label">🕐 Hora:</span>
-              <span class="value">${appointment.startTime} - ${appointment.endTime}</span>
+              <span class="value">${appointment.startTime.slice(0, 5)} - ${appointment.endTime.slice(0, 5)}</span>
             </div>
             <div class="detail-row">
               <span class="label">👨‍⚕️ Profesional:</span>
@@ -256,7 +354,7 @@ const emailTemplates = {
             </div>
             <div class="detail-row">
               <span class="label">🕐 Hora:</span>
-              <span class="value">${appointment.startTime} - ${appointment.endTime}</span>
+              <span class="value">${appointment.startTime.slice(0, 5)} - ${appointment.endTime.slice(0, 5)}</span>
             </div>
             <div class="detail-row">
               <span class="label">👨‍⚕️ Profesional:</span>
@@ -379,7 +477,7 @@ export const sendAppointmentNotification = async (appointment, patient, professi
 
 👤 Paciente: ${patient.firstName} ${patient.lastName}
 📅 Fecha: ${new Date(appointment.date).toLocaleDateString('es-ES')}
-🕐 Hora: ${appointment.startTime}
+🕐 Hora: ${appointment.startTime.slice(0, 5)} - ${appointment.endTime.slice(0, 5)}
 👨‍⚕️ Profesional: Dr. ${professional?.name || 'No asignado'} ${professional?.lastName || ''}
 
 💡 Llegue 10 minutos antes de su cita.
@@ -409,6 +507,64 @@ export const sendAppointmentNotification = async (appointment, patient, professi
   }
 };
 
+// Función para enviar notificación de reagendado
+export const sendAppointmentRescheduled = async (appointment, patient, professional = null) => {
+  try {
+    console.log('🔄 Enviando notificación de reagendado...', {
+      patientEmail: patient.email,
+      patientPhone: patient.phone,
+      appointmentDate: appointment.date,
+      appointmentStartTime: appointment.startTime,
+      appointmentEndTime: appointment.endTime
+    });
+
+    // Si no tenemos el profesional, intentar obtenerlo
+    if (!professional && appointment.professionalId) {
+      const { Users } = await import('../database/connection.database.js');
+      professional = await Users.findByPk(appointment.professionalId, {
+        attributes: ['id', 'name', 'lastName', 'email']
+      });
+    }
+
+    // Template de reagendado
+    const emailTemplate = emailTemplates.appointmentRescheduled(appointment, patient, professional || { name: 'No asignado', lastName: '' });
+    
+    // Mensaje de WhatsApp para reagendado
+    const whatsappMessage = `
+🔄 *Turno Reagendado - Centro Quiropráctico*
+
+👤 ${patient.firstName} ${patient.lastName}
+📅 Nueva fecha: ${new Date(appointment.date).toLocaleDateString('es-ES')}
+🕐 Nuevo horario: ${appointment.startTime.slice(0, 5)} - ${appointment.endTime.slice(0, 5)}
+👨‍⚕️ Profesional: Dr. ${professional?.name || 'No asignado'} ${professional?.lastName || ''}
+
+⚠️ Por favor confirme que puede asistir en el nuevo horario.
+📞 Para confirmar o solicitar cambio: +54 353 730 4294
+    `.trim();
+
+    // Enviar notificaciones en paralelo
+    const [emailResult, whatsappResult] = await Promise.allSettled([
+      patient.email ? sendEmailNotification(patient.email, emailTemplate.subject, emailTemplate.html) : Promise.resolve({ success: false, error: 'Sin email' }),
+      patient.phone ? sendWhatsAppNotification(patient.phone, whatsappMessage) : Promise.resolve({ success: false, error: 'Sin teléfono' })
+    ]);
+
+    const results = {
+      email: emailResult.status === 'fulfilled' ? emailResult.value : { success: false, error: emailResult.reason },
+      whatsapp: whatsappResult.status === 'fulfilled' ? whatsappResult.value : { success: false, error: whatsappResult.reason }
+    };
+
+    console.log('📊 Resultados de notificación de reagendado:', results);
+    return results;
+
+  } catch (error) {
+    console.error('❌ Error en sendAppointmentRescheduled:', error);
+    return {
+      email: { success: false, error: error.message },
+      whatsapp: { success: false, error: error.message }
+    };
+  }
+};
+
 // Función para enviar recordatorio
 export const sendAppointmentReminder = async (appointment, patient, professional) => {
   try {
@@ -419,7 +575,7 @@ export const sendAppointmentReminder = async (appointment, patient, professional
 
 👤 ${patient.firstName} ${patient.lastName}
 📅 MAÑANA: ${new Date(appointment.date).toLocaleDateString('es-ES')}
-🕐 Hora: ${appointment.startTime}
+🕐 Hora: ${appointment.startTime.slice(0, 5)} - ${appointment.endTime.slice(0, 5)}
 
 💡 No olvide llegar 10 minutos antes.
 📞 +54 353 730 4294
@@ -454,7 +610,7 @@ export const sendAppointmentCancellation = async (appointment, patient, professi
 
 👤 ${patient.firstName} ${patient.lastName}
 📅 Fecha: ${new Date(appointment.date).toLocaleDateString('es-ES')}
-🕐 Hora: ${appointment.startTime}
+🕐 Hora: ${appointment.startTime.slice(0, 5)} - ${appointment.endTime.slice(0, 5)}
 
 ${reason ? `📝 Motivo: ${reason}` : ''}
 

@@ -1,6 +1,6 @@
 import { Appointments, Patients, Users } from '../../database/connection.database.js';
 import { Op } from 'sequelize';
-import { sendAppointmentNotification, sendAppointmentCancellation, sendAppointmentReminder, sendAppointmentRequest } from '../../services/notification.service.js';
+import { sendAppointmentNotification, sendAppointmentCancellation, sendAppointmentReminder, sendAppointmentRequest, sendAppointmentRescheduled } from '../../services/notification.service.js';
 
 /**
  * @swagger
@@ -487,6 +487,9 @@ const updateAppointment = async (req, res) => {
       updatedBy: req.user.id
     });
 
+    // Recargar la cita para obtener los datos actualizados
+    await appointment.reload();
+
     // Enviar notificación de cancelación si el estado cambió a cancelado
     if (status === 'cancelled' && previousStatus !== 'cancelled') {
       try {
@@ -512,6 +515,63 @@ const updateAppointment = async (req, res) => {
         }
       } catch (notificationError) {
         console.error('❌ Error al enviar notificación de cancelación:', notificationError);
+        // No fallar la actualización por errores en notificaciones
+      }
+    }
+
+    // Enviar notificación de reagendado si el estado cambió a rescheduled o se modificaron fecha/hora
+    const wasRescheduled = status === 'rescheduled' && previousStatus !== 'rescheduled';
+    const wasTimeChanged = (date && date !== appointment.date) || 
+                          (startTime && startTime !== appointment.startTime) || 
+                          (endTime && endTime !== appointment.endTime);
+
+    if (wasRescheduled || wasTimeChanged) {
+      try {
+        // Obtener datos del paciente y profesional para las notificaciones
+        const [patient, professional] = await Promise.all([
+          Patients.findByPk(appointment.patientId, {
+            attributes: ['id', 'firstName', 'lastName', 'phone', 'email']
+          }),
+          Users.findByPk(appointment.professionalId, {
+            attributes: ['id', 'name', 'lastName', 'email']
+          })
+        ]);
+
+        if (patient) {
+          console.log('📅 Debug - Datos de cita para notificación:', {
+            appointmentId: appointment.id,
+            originalDate: appointment.date,
+            newDate: date,
+            originalStartTime: appointment.startTime,
+            newStartTime: startTime,
+            originalEndTime: appointment.endTime,
+            newEndTime: endTime,
+            wasRescheduled,
+            wasTimeChanged
+          });
+
+          console.log('📅 Debug - Datos finales para notificación:', {
+            finalDate: appointment.date,
+            finalStartTime: appointment.startTime,
+            finalEndTime: appointment.endTime,
+            finalStatus: appointment.status
+          });
+
+          const notificationResults = await sendAppointmentRescheduled(
+            appointment, 
+            patient, 
+            professional
+          );
+          
+          console.log('📧 Notificación de reagendado enviada:', notificationResults);
+          
+          // Actualizar el flag de notificación enviada
+          await appointment.update({ 
+            notificationSent: notificationResults.email?.success || notificationResults.whatsapp?.success 
+          });
+        }
+      } catch (notificationError) {
+        console.error('❌ Error al enviar notificación de reagendado:', notificationError);
         // No fallar la actualización por errores en notificaciones
       }
     }
