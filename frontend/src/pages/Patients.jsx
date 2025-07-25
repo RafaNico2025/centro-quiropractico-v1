@@ -30,11 +30,13 @@ export default function Patients() {
   const [selectedPatientId, setSelectedPatientId] = useState(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [patientToDelete, setPatientToDelete] = useState(null)
+  const [search, setSearch] = useState("");
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        const data = await patientService.getAll()
+        const data = await patientService.getAll(search)
         setPatients(data)
       } catch (error) {
         console.error('Error al obtener pacientes:', error)
@@ -48,12 +50,12 @@ export default function Patients() {
       }
     }
     fetchPatients()
-  }, [])
+  }, [search])
 
   // Refresca la lista después de crear o editar un paciente
   const handleSuccess = () => {
     setLoading(true)
-    patientService.getAll().then(setPatients).finally(() => setLoading(false))
+    patientService.getAll(search).then(setPatients).finally(() => setLoading(false))
   }
 
   const handleDeleteClick = (patient) => {
@@ -83,6 +85,16 @@ export default function Patients() {
 
   return (
     <div className="container mx-auto p-6">
+      {/* Barra de búsqueda */}
+      <div className="mb-4 flex justify-end">
+        <input
+          type="text"
+          placeholder="Buscar por nombre, apellido o DNI..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="border rounded px-3 py-2 w-full max-w-md"
+        />
+      </div>
       <NewPatientForm
         open={openForm}
         onOpenChange={setOpenForm}

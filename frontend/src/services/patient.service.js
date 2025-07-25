@@ -2,9 +2,11 @@ import api from './api';
 
 export const patientService = {
   // Obtener todos los pacientes
-  getAll: async () => {
+  getAll: async (search = "") => {
     try {
-      const response = await api.get('/patients');
+      const response = await api.get('/patients', {
+        params: search ? { search } : {}
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
