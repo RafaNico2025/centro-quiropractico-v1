@@ -641,12 +641,14 @@ export default function Appointments() {
         }}
         onSuccess={loadAppointments}
         appointment={selectedAppointment}
+        onPatientsUpdate={loadAppointments}
       />
 
       <NewIncomeForm
         open={showIncomeForm}
         onOpenChange={setShowIncomeForm}
         onSuccess={handleIncomeFormSuccess} // Confirmar el estado de la cita después de completar el formulario
+        onPatientsUpdate={loadAppointments}
       />
     </div>
   )

@@ -21,7 +21,7 @@ const initialFormData = {
   familyHistory: ''
 }
 
-export function NewClinicalRecordForm({ open, onOpenChange, onSuccess }) {
+export function NewClinicalRecordForm({ open, onOpenChange, onSuccess, onPatientsUpdate }) {
   const [formData, setFormData] = useState(initialFormData)
   const [patients, setPatients] = useState([])
   const [loading, setLoading] = useState(false)
@@ -35,7 +35,7 @@ export function NewClinicalRecordForm({ open, onOpenChange, onSuccess }) {
       .then(setPatients)
       .catch(() => setPatients([]))
       .finally(() => setLoadingPatients(false))
-  }, [open])
+  }, [open, onPatientsUpdate])
 
   // Limpia el formulario cuando se cierra el modal
   useEffect(() => {

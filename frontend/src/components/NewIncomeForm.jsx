@@ -20,7 +20,7 @@ const initialFormData = {
   notes: ''
 }
 
-export function NewIncomeForm({ open, onOpenChange, onSuccess }) {
+export function NewIncomeForm({ open, onOpenChange, onSuccess, onPatientsUpdate }) {
   const [formData, setFormData] = useState(initialFormData)
   const [patients, setPatients] = useState([])
   const [loading, setLoading] = useState(false)
@@ -34,7 +34,7 @@ export function NewIncomeForm({ open, onOpenChange, onSuccess }) {
       .then(setPatients)
       .catch(() => setPatients([]))
       .finally(() => setLoadingPatients(false))
-  }, [open])
+  }, [open, onPatientsUpdate])
 
   useEffect(() => {
     if (!open) setFormData(initialFormData)

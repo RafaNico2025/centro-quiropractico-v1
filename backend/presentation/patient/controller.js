@@ -168,7 +168,8 @@ const getPatients = async (req, res) => {
       where[Op.or] = [
         { firstName: { [Op.iLike]: `%${search}%` } },
         { lastName: { [Op.iLike]: `%${search}%` } },
-        { dni: { [Op.iLike]: `%${search}%` } }
+        { dni: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } }
       ];
     }
     const patients = await Patients.findAll({ 
@@ -295,17 +296,108 @@ const updatePatient = async (req, res) => {
       }
     }
 
-    await patient.update({
-      firstName,
-      lastName,
-      dni,
-      phone,
-      email,
-      address,
-      birthDate,
-      gender,
-      emergencyContact,
-      emergencyPhone
+    // Iniciar una transacción para asegurar la integridad de los datos
+    await sequelize.transaction(async (t) => {
+      // 1. PRIMERO: Buscar el usuario asociado usando la relación directa
+      let user = null;
+      // Buscar usuario que tenga este patientId
+      user = await Users.findOne({
+        where: {
+          patientId: id // Usar la relación directa
+        }
+      });
+      
+      if (user) {
+        console.log('Usuario encontrado para sincronización:', user.id, 'Email actual:', user.email);
+      } else {
+        console.log('No se encontró usuario asociado al paciente con patientId:', id);
+      }
+
+      // 2. SEGUNDO: Actualizar el paciente
+      await patient.update({
+        firstName,
+        lastName,
+        dni,
+        phone,
+        email,
+        address,
+        birthDate,
+        gender,
+        emergencyContact,
+        emergencyPhone
+      }, { transaction: t });
+
+      // 3. TERCERO: Si encontramos el usuario, actualizarlo también
+      if (user) {
+        console.log('Actualizando usuario con ID:', user.id);
+        
+        // Actualizar los campos del usuario que corresponden al paciente
+        const userUpdateData = {};
+        
+        // Actualizar email si cambió
+        if (email && email !== user.email) {
+          // Verificar que no exista otro usuario con el nuevo email
+          const existingUserWithEmail = await Users.findOne({
+            where: { 
+              email,
+              id: { [Op.ne]: user.id } // Excluir el usuario actual
+            }
+          });
+          if (!existingUserWithEmail) {
+            userUpdateData.email = email;
+            console.log('Actualizando email del usuario:', user.email, '->', email);
+          } else {
+            console.log('No se puede actualizar email, ya existe otro usuario con ese email');
+          }
+        }
+        
+        // Actualizar nombre y apellido
+        if (firstName && firstName !== user.name) {
+          userUpdateData.name = firstName;
+          console.log('Actualizando nombre del usuario:', user.name, '->', firstName);
+        }
+        if (lastName && lastName !== user.lastName) {
+          userUpdateData.lastName = lastName;
+          console.log('Actualizando apellido del usuario:', user.lastName, '->', lastName);
+        }
+        if (phone && phone !== user.phone) {
+          userUpdateData.phone = phone;
+          console.log('Actualizando teléfono del usuario:', user.phone, '->', phone);
+        }
+        
+        // Actualizar username solo si el DNI cambió y el username actual era igual al DNI anterior
+        // Esto mantiene la consistencia cuando el username se basaba en el DNI
+        if (dni && dni !== patient.dni && user.username === patient.dni) {
+          // Verificar que no exista otro usuario con el nuevo DNI como username
+          const existingUserWithUsername = await Users.findOne({
+            where: { 
+              username: dni,
+              id: { [Op.ne]: user.id } // Excluir el usuario actual
+            }
+          });
+          if (!existingUserWithUsername) {
+            userUpdateData.username = dni;
+            console.log('Actualizando username del usuario (DNI cambió):', user.username, '->', dni);
+          } else {
+            console.log('No se puede actualizar username, ya existe otro usuario con ese DNI como username');
+          }
+        }
+        
+        // NOTA: No actualizamos el username automáticamente
+        // El username es independiente del DNI del paciente y no debe cambiar
+        // Si se necesita cambiar el username, debe hacerse manualmente desde la gestión de usuarios
+        
+        // Actualizar el usuario si hay cambios
+        if (Object.keys(userUpdateData).length > 0) {
+          console.log('Actualizando usuario con datos:', userUpdateData);
+          await user.update(userUpdateData, { transaction: t });
+          console.log('Usuario actualizado exitosamente');
+        } else {
+          console.log('No hay cambios para actualizar en el usuario');
+        }
+      } else {
+        console.log('No se encontró usuario asociado al paciente');
+      }
     });
 
     res.json(patient);

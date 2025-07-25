@@ -253,31 +253,31 @@ const updateUser = async (req, res) => {
     }
 
     // Si se cambia el username, verificar que no exista
-    if (Username && Username !== user.Username) {
-      const existingUser = await Users.findOne({ where: { Username } });
+    if (Username && Username !== user.username) {
+      const existingUser = await Users.findOne({ where: { username: Username } });
       if (existingUser) {
         return res.status(400).json({ message: 'El nombre de usuario ya existe' });
       }
     }
 
     // Si se cambia la contraseña, encriptarla
-    let hashedPassword = user.Password;
+    let hashedPassword = user.password;
     if (Password) {
       hashedPassword = await bcrypt.hash(Password, 10);
     }
 
     await user.update({
-      Username: Username || user.Username,
-      Password: hashedPassword,
-      Nombre: Nombre || user.Nombre,
-      Apellido: Apellido || user.Apellido,
-      Telefono: Telefono || user.Telefono,
-      Email: Email || user.Email,
-      Role: Role || user.Role
+      username: Username || user.username,
+      password: hashedPassword,
+      name: Nombre || user.name,
+      lastName: Apellido || user.lastName,
+      phone: Telefono || user.phone,
+      email: Email || user.email,
+      role: Role || user.role
     });
 
     // Excluir la contraseña en la respuesta
-    const { Password: _, ...userWithoutPassword } = user.toJSON();
+    const { password: _, ...userWithoutPassword } = user.toJSON();
     res.json(userWithoutPassword);
   } catch (error) {
     console.error('Error al actualizar usuario:', error);
@@ -396,14 +396,14 @@ const changePassword = async (req, res) => {
     }
 
     // Verificar la contraseña actual
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.Password);
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Contraseña actual incorrecta' });
     }
 
     // Encriptar y guardar la nueva contraseña
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await user.update({ Password: hashedPassword });
+    await user.update({ password: hashedPassword });
 
     res.json({ message: 'Contraseña actualizada correctamente' });
   } catch (error) {
@@ -470,6 +470,12 @@ const getProfessionals = async (req, res) => {
  *     tags: [Pacientes]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Término de búsqueda para filtrar pacientes
  *     responses:
  *       200:
  *         description: Lista de pacientes
@@ -495,7 +501,19 @@ const getProfessionals = async (req, res) => {
  */
 const getPatients = async (req, res) => {
   try {
+    const { search } = req.query;
+    const where = {};
+    if (search) {
+      where[Op.or] = [
+        { firstName: { [Op.iLike]: `%${search}%` } },
+        { lastName: { [Op.iLike]: `%${search}%` } },
+        { dni: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+    
     const patients = await Patients.findAll({
+      where,
       attributes: ['id', 'firstName', 'lastName', 'email', 'phone']
     })
 

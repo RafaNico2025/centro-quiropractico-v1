@@ -9,7 +9,7 @@ import { appointmentService } from '../services/appointment.service'
 import { userService } from '../services/user.service'
 import { useToast } from './ui/use-toast'
 
-export function AppointmentForm({ open, onOpenChange, onSuccess, appointment }) {
+export function AppointmentForm({ open, onOpenChange, onSuccess, appointment, onPatientsUpdate }) {
   const [formData, setFormData] = useState({
     date: '',
     startTime: '',
@@ -88,7 +88,7 @@ export function AppointmentForm({ open, onOpenChange, onSuccess, appointment }) 
         setErrors({}) // Limpiar errores al cerrar
       }
     }
-  }, [open, appointment])
+  }, [open, appointment, onPatientsUpdate])
 
   const validateForm = () => {
     const newErrors = {}

@@ -62,6 +62,7 @@ export default function Accounting() {
         open={openNewIncome}
         onOpenChange={setOpenNewIncome}
         onSuccess={fetchTransactions}
+        onPatientsUpdate={fetchTransactions}
       />
 
       {/* <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">

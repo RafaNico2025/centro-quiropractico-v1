@@ -2,9 +2,11 @@ import api from './api'
 
 export const userService = {
   // Obtener todos los pacientes
-  getPatients: async () => {
+  getPatients: async (search = "") => {
     try {
-      const response = await api.get('/users/patients')
+      const response = await api.get('/users/patients', {
+        params: search ? { search } : {}
+      })
       console.log('Respuesta de pacientes:', response.data)
       return response.data
     } catch (error) {

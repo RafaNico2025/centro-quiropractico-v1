@@ -89,7 +89,7 @@ export default function Patients() {
       <div className="mb-4 flex justify-end">
         <input
           type="text"
-          placeholder="Buscar por nombre, apellido o DNI..."
+          placeholder="Buscar por nombre, apellido, DNI o email..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="border rounded px-3 py-2 w-full max-w-md"

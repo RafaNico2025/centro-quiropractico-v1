@@ -111,6 +111,7 @@ export default function ClinicalRecords() {
         open={openForm}
         onOpenChange={setOpenForm}
         onSuccess={fetchRecords}
+        onPatientsUpdate={fetchRecords}
       />
       <ClinicalRecordDetail
         open={openDetail}
