@@ -20,7 +20,7 @@ const initialFormData = {
   notes: ''
 }
 
-export function NewIncomeForm({ open, onOpenChange, onSuccess, onPatientsUpdate }) {
+export function NewIncomeForm({ open, onOpenChange, onSuccess, onPatientsUpdate, selectedPatient }) {
   const [formData, setFormData] = useState(initialFormData)
   const [patients, setPatients] = useState([])
   const [loading, setLoading] = useState(false)
@@ -37,8 +37,21 @@ export function NewIncomeForm({ open, onOpenChange, onSuccess, onPatientsUpdate 
   }, [open, onPatientsUpdate])
 
   useEffect(() => {
-    if (!open) setFormData(initialFormData)
+    if (!open) {
+      setFormData(initialFormData)
+    }
   }, [open])
+
+  useEffect(() => {
+    if (open && selectedPatient && patients.length > 0) {
+      // Establecer el paciente cuando se abre el formulario con un paciente seleccionado y los pacientes están cargados
+      console.log('Setting selected patient:', selectedPatient)
+      setFormData(prev => ({
+        ...prev,
+        patientId: selectedPatient.id.toString()
+      }))
+    }
+  }, [open, selectedPatient, patients.length])
 
   const handleChange = (e) => {
     const { name, value } = e.target

@@ -73,6 +73,7 @@ export default function Appointments() {
     const patientName = `${appointment.Patient?.firstName} ${appointment.Patient?.lastName}`
 
     if (newStatus === 'completed') {
+      console.log('Setting selected appointment:', appointment)
       setSelectedAppointment(appointment)
       setShowIncomeForm(true) // Abrir el formulario de ingresos
       return
@@ -649,6 +650,7 @@ export default function Appointments() {
         onOpenChange={setShowIncomeForm}
         onSuccess={handleIncomeFormSuccess} // Confirmar el estado de la cita después de completar el formulario
         onPatientsUpdate={loadAppointments}
+        selectedPatient={selectedAppointment?.Patient || null}
       />
     </div>
   )
