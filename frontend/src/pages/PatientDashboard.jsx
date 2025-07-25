@@ -14,6 +14,15 @@ import { userService } from "../services/user.service";
 import api from "../services/api";
 import { PatientEdit } from "../components/PatientEdit"; // Asegúrate de importar el componente
 
+// Función helper para obtener la fecha de hoy en formato YYYY-MM-DD sin problemas de zona horaria
+const getTodayString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const PatientDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -36,6 +45,8 @@ const PatientDashboard = () => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [selectedSlots, setSelectedSlots] = useState([]); // Array para múltiples selecciones
+  const [existingAppointments, setExistingAppointments] = useState([]); // Citas existentes del paciente
 
   const storedUser = user || JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -50,8 +61,6 @@ const PatientDashboard = () => {
     }
   };
 
-  
-
   // 3. Traer appointments y filtrar por paciente
   const loadAppointments = async () => {
     try {
@@ -62,10 +71,23 @@ const PatientDashboard = () => {
         const userName = userData.Nombre || userData.name;
 
         const filtered = data.filter(
-          (appt) =>
-            appt.Patient &&
-            appt.Patient.firstName &&
-            appt.Patient.firstName.toLowerCase() === userName?.toLowerCase()
+          (appt) => {
+            // Si el usuario tiene un patientId, usarlo para la comparación
+            if (userData.patientId) {
+              return appt.patientId === userData.patientId;
+            }
+            
+            // Si no hay patientId, usar comparación de nombres (más flexible)
+            const patientFirstName = appt.Patient?.firstName;
+            const userName = userData.Nombre || userData.name;
+            
+            return (
+              appt.Patient &&
+              appt.Patient.firstName &&
+              (appt.Patient.firstName.toLowerCase() === userName?.toLowerCase() ||
+               appt.Patient.firstName.toLowerCase().includes(userName?.toLowerCase()))
+            );
+          }
         );
 
         setPatientAppointments(filtered);
@@ -100,6 +122,35 @@ const PatientDashboard = () => {
     try {
       const slotsData = await appointmentService.getAvailableSlots(date);
       setAvailableSlots(slotsData.slots || []);
+      
+      // También cargar las citas existentes del paciente para esta fecha
+      if (userData) {
+        const userName = userData.Nombre || userData.name;
+        
+        // Usar la misma lógica de comparación que en loadAppointments
+        const patientAppointmentsForDate = appointments.filter(
+          (appt) => {
+            // Si el usuario tiene un patientId, usarlo para la comparación
+            if (userData.patientId) {
+              return appt.patientId === userData.patientId && 
+                     appt.date === date &&
+                     appt.status !== 'cancelled';
+            }
+            
+            // Si no hay patientId, usar comparación de nombres (más flexible)
+            return (
+              appt.Patient &&
+              appt.Patient.firstName &&
+              (appt.Patient.firstName.toLowerCase() === userName?.toLowerCase() ||
+               appt.Patient.firstName.toLowerCase().includes(userName?.toLowerCase())) &&
+              appt.date === date &&
+              appt.status !== 'cancelled'
+            );
+          }
+        );
+        
+        setExistingAppointments(patientAppointmentsForDate);
+      }
     } catch (error) {
       console.error("Error al cargar horarios:", error);
       toast({
@@ -117,6 +168,7 @@ const PatientDashboard = () => {
   const handleDateChange = (e) => {
     const date = e.target.value;
     setSelectedDate(date);
+    setSelectedSlots([]); // Limpiar selecciones al cambiar fecha
     setAppointmentRequest(prev => ({
       ...prev,
       fechaSeleccionada: date,
@@ -128,16 +180,97 @@ const PatientDashboard = () => {
       loadAvailableSlots(date);
     } else {
       setAvailableSlots([]);
+      setExistingAppointments([]);
     }
   };
 
-  // Función para seleccionar un horario
+  // Función para seleccionar/deseleccionar un horario
   const handleSlotSelection = (slot) => {
-    setAppointmentRequest(prev => ({
-      ...prev,
-      horarioSeleccionado: `${slot.startTime} - ${slot.endTime}`,
-      preferenciaHora: `${slot.startTime} - ${slot.endTime}`
-    }));
+    const slotKey = `${slot.startTime}-${slot.endTime}`;
+    
+    setSelectedSlots(prev => {
+      const isAlreadySelected = prev.some(s => `${s.startTime}-${s.endTime}` === slotKey);
+      
+      if (isAlreadySelected) {
+        // Deseleccionar
+        return prev.filter(s => `${s.startTime}-${s.endTime}` !== slotKey);
+      } else {
+        // Seleccionar (máximo 3)
+        if (prev.length >= 3) {
+          toast({
+            title: "Límite alcanzado",
+            description: "Puedes seleccionar máximo 3 horarios",
+            variant: "destructive",
+          });
+          return prev;
+        }
+        return [...prev, slot];
+      }
+    });
+  };
+
+  // Función para verificar si un slot ya está ocupado por el paciente
+  const isSlotOccupiedByPatient = (slot) => {
+    const isOccupied = existingAppointments.some(appt => 
+      appt.startTime === slot.startTime && 
+      appt.endTime === slot.endTime &&
+      appt.status !== 'cancelled'      // Solo excluir citas canceladas
+    );
+    
+    return isOccupied;
+  };
+
+  // Función para verificar si un slot está ocupado por una cita reagendada del paciente
+  const isSlotRescheduledByPatient = (slot) => {
+    return existingAppointments.some(appt => 
+      appt.startTime === slot.startTime && 
+      appt.endTime === slot.endTime &&
+      appt.status === 'rescheduled'
+    );
+  };
+
+  // Función para obtener el color de un slot
+  const getSlotColor = (slot) => {
+    const slotKey = `${slot.startTime}-${slot.endTime}`;
+    const isSelected = selectedSlots.some(s => `${s.startTime}-${s.endTime}` === slotKey);
+    const isOccupied = isSlotOccupiedByPatient(slot);
+    
+    if (isOccupied) {
+      return 'bg-gray-400 text-white border-gray-400 cursor-not-allowed'; // Gris para citas existentes
+    } else if (isSelected) {
+      return 'bg-blue-500 text-white border-blue-500'; // Azul para seleccionados
+    } else {
+      return 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-300'; // Normal
+    }
+  };
+
+  // Función para generar todos los horarios del día (disponibles y ocupados)
+  const getAllTimeSlots = () => {
+    const slots = [];
+    const startHour = 7;
+    const endHour = 20;
+    
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const startTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const endMinute = minute + 15;
+        const endTimeHour = endMinute >= 60 ? hour + 1 : hour;
+        const endTimeMinute = endMinute >= 60 ? endMinute - 60 : endMinute;
+        const endTime = `${endTimeHour.toString().padStart(2, '0')}:${endTimeMinute.toString().padStart(2, '0')}`;
+        
+        if (endTimeHour <= endHour) {
+          slots.push({
+            startTime,
+            endTime,
+            available: availableSlots.some(slot => 
+              slot.startTime === startTime && slot.endTime === endTime
+            )
+          });
+        }
+      }
+    }
+    
+    return slots;
   };
 
   // Cargar datos en orden
@@ -156,10 +289,10 @@ const PatientDashboard = () => {
     
     try {
       // Validar que todos los campos requeridos estén completos
-      if (!appointmentRequest.motivo.trim() || !appointmentRequest.fechaSeleccionada || !appointmentRequest.horarioSeleccionado) {
+      if (!appointmentRequest.motivo.trim() || !appointmentRequest.fechaSeleccionada || selectedSlots.length === 0) {
         toast({
           title: "Error",
-          description: "Por favor completa el motivo, selecciona una fecha y elige un horario disponible",
+          description: "Por favor completa el motivo, selecciona una fecha y elige al menos un horario disponible",
           variant: "destructive",
         });
         return;
@@ -172,14 +305,15 @@ const PatientDashboard = () => {
         duration: 3000,
       });
 
-      // Preparar datos de la solicitud con el horario específico seleccionado
+      // Preparar datos de la solicitud con múltiples horarios
       const requestData = {
         motivo: appointmentRequest.motivo,
         preferenciaDia: appointmentRequest.fechaSeleccionada,
-        preferenciaHora: appointmentRequest.horarioSeleccionado,
+        preferenciaHora: selectedSlots.map(slot => `${slot.startTime} - ${slot.endTime}`).join(', '),
         notas: appointmentRequest.notas,
         fechaSeleccionada: appointmentRequest.fechaSeleccionada,
-        horarioSeleccionado: appointmentRequest.horarioSeleccionado
+        horarioSeleccionado: selectedSlots.map(slot => `${slot.startTime} - ${slot.endTime}`).join(', '),
+        horariosSeleccionados: selectedSlots // Array completo de horarios seleccionados
       };
 
       // Enviar solicitud usando el servicio
@@ -199,11 +333,13 @@ const PatientDashboard = () => {
       });
       setSelectedDate("");
       setAvailableSlots([]);
+      setSelectedSlots([]);
+      setExistingAppointments([]);
 
       // Mostrar mensaje de éxito
       toast({
         title: "¡Solicitud enviada exitosamente!",
-        description: response.message || "Nos pondremos en contacto contigo pronto para confirmar tu cita en el horario seleccionado.",
+        description: response.message || `Solicitud enviada con ${selectedSlots.length} horario(s) seleccionado(s). Nos pondremos en contacto contigo pronto para confirmar tu cita.`,
         duration: 5000,
       });
 
@@ -242,7 +378,6 @@ const PatientDashboard = () => {
     )}`;
     window.open(whatsappUrl, "_blank");
   };
-
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -426,7 +561,7 @@ const PatientDashboard = () => {
                         type="date"
                         value={selectedDate}
                         onChange={handleDateChange}
-                        min={new Date().toISOString().split('T')[0]}
+                        min={getTodayString()}
                         className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         required
                       />
@@ -434,41 +569,117 @@ const PatientDashboard = () => {
 
                     {selectedDate && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Horarios Disponibles
-                        </label>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Horarios Disponibles
+                          </label>
+                          <div className="text-sm text-gray-500">
+                            {selectedSlots.length}/3 seleccionados
+                          </div>
+                        </div>
+                        
+                        {/* Leyenda de colores */}
+                        <div className="mb-3 flex flex-wrap gap-4 text-xs">
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                            <span>Seleccionado</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 bg-gray-400 rounded"></div>
+                            <span>Ya tienes cita activa</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 bg-white border border-gray-300 rounded"></div>
+                            <span>Disponible</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-3 h-3 bg-red-200 border border-red-300 rounded"></div>
+                            <span>Ocupado por otros / Reagendado</span>
+                          </div>
+                        </div>
+                        
                         {loadingSlots ? (
                           <div className="flex items-center justify-center p-4 text-gray-500">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mr-2"></div>
                             Cargando horarios...
                           </div>
-                        ) : availableSlots.length > 0 ? (
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                            {availableSlots.map((slot, index) => (
-                              <button
-                                key={index}
-                                type="button"
-                                onClick={() => handleSlotSelection(slot)}
-                                className={`p-2 text-sm border rounded-md transition-colors ${
-                                  appointmentRequest.horarioSeleccionado === `${slot.startTime} - ${slot.endTime}`
-                                    ? 'bg-blue-500 text-white border-blue-500'
-                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-300'
-                                }`}
-                              >
-                                {slot.startTime} - {slot.endTime}
-                              </button>
-                            ))}
-                          </div>
                         ) : (
-                          <p className="text-gray-500 p-4 text-center border rounded-md bg-gray-50">
-                            No hay horarios disponibles para esta fecha. 
-                            Por favor selecciona otra fecha.
-                          </p>
+                          <div>
+                            {/* Mostrar todos los horarios del día */}
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {getAllTimeSlots().map((slot, index) => {
+                                const isOccupiedByPatient = isSlotOccupiedByPatient(slot);
+                                const isRescheduledByPatient = isSlotRescheduledByPatient(slot);
+                                const isAvailable = slot.available;
+                                const isSelected = selectedSlots.some(s => 
+                                  `${s.startTime}-${s.endTime}` === `${slot.startTime}-${slot.endTime}`
+                                );
+                                
+                                // Determinar el color y estado del slot
+                                let slotColor = '';
+                                let isDisabled = false;
+                                let tooltip = '';
+                                
+                                if (isOccupiedByPatient && !isRescheduledByPatient) {
+                                  slotColor = 'bg-gray-400 text-white border-gray-400 cursor-not-allowed';
+                                  isDisabled = true;
+                                  tooltip = 'Ya tienes una cita activa en este horario';
+                                } else if (isRescheduledByPatient) {
+                                  slotColor = 'bg-red-200 text-red-700 border-red-300 cursor-not-allowed';
+                                  isDisabled = true;
+                                  tooltip = 'Esta cita fue reagendada por ti';
+                                } else if (isSelected) {
+                                  slotColor = 'bg-blue-500 text-white border-blue-500';
+                                  tooltip = 'Horario seleccionado';
+                                } else if (isAvailable) {
+                                  slotColor = 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-300';
+                                  tooltip = 'Horario disponible';
+                                } else {
+                                  // Solo marcar como ocupado si realmente no está disponible
+                                  // El backend ya nos dice cuáles están disponibles, así que los que no están
+                                  // en availableSlots están ocupados por otros pacientes
+                                  slotColor = 'bg-red-200 text-red-700 border-red-300 cursor-not-allowed';
+                                  isDisabled = true;
+                                  tooltip = 'Horario ocupado por otro paciente';
+                                }
+                                
+                                return (
+                                  <button
+                                    key={index}
+                                    type="button"
+                                    onClick={() => !isDisabled && handleSlotSelection(slot)}
+                                    disabled={isDisabled}
+                                    title={tooltip}
+                                    className={`p-2 text-sm border rounded-md transition-colors ${slotColor}`}
+                                  >
+                                    {slot.startTime} - {slot.endTime}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            
+                            {/* Información adicional */}
+                            <div className="mt-3 text-xs text-gray-500">
+                              <p>• Horarios en <span className="text-gray-400 font-medium">gris</span>: Ya tienes una cita activa</p>
+                              <p>• Horarios en <span className="text-red-600 font-medium">rojo</span>: Ocupados por otros pacientes o citas reagendadas</p>
+                              <p>• Horarios en <span className="text-blue-600 font-medium">azul</span>: Seleccionados por ti</p>
+                              <p>• Horarios en <span className="text-gray-600 font-medium">blanco</span>: Disponibles para seleccionar</p>
+                            </div>
+                          </div>
                         )}
                         
-                        {appointmentRequest.horarioSeleccionado && (
-                          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
-                            ✓ Horario seleccionado: {appointmentRequest.horarioSeleccionado}
+                        {selectedSlots.length > 0 && (
+                          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                            <p className="text-green-700 text-sm font-medium mb-1">
+                              ✓ Horarios seleccionados:
+                            </p>
+                            <div className="space-y-1">
+                              {selectedSlots.map((slot, index) => (
+                                <p key={index} className="text-green-600 text-xs">
+                                  {slot.startTime} - {slot.endTime}
+                                </p>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -500,9 +711,9 @@ const PatientDashboard = () => {
                       <Button 
                         type="submit" 
                         className="flex-1"
-                        disabled={!appointmentRequest.motivo.trim() || !selectedDate || !appointmentRequest.horarioSeleccionado}
+                        disabled={!appointmentRequest.motivo.trim() || !selectedDate || selectedSlots.length === 0}
                       >
-                        Enviar Solicitud
+                        Enviar Solicitud ({selectedSlots.length} horario{selectedSlots.length !== 1 ? 's' : ''})
                       </Button>
                       <Button
                         type="button"
@@ -511,6 +722,8 @@ const PatientDashboard = () => {
                           setShowAppointmentForm(false);
                           setSelectedDate("");
                           setAvailableSlots([]);
+                          setSelectedSlots([]);
+                          setExistingAppointments([]);
                           setAppointmentRequest({
                             motivo: "",
                             preferenciaDia: "",

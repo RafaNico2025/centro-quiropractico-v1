@@ -89,26 +89,13 @@ const createAppointment = async (req, res) => {
     const now = new Date();
     const todayString = now.toISOString().split('T')[0]; // Formato YYYY-MM-DD
     
-    console.log('🔥 DEBUGGING createAppointment - Validación fecha:', {
-      fechaRecibida: date,
-      fechaRecibidaTipo: typeof date,
-      fechaHoyString: todayString,
-      fechaHoyTipo: typeof todayString,
-      ahora: now.toString(),
-      comparacion: `"${date}" >= "${todayString}" = ${date >= todayString}`,
-      esFechaValida: date >= todayString
-    });
-    
     // Permitir la fecha de hoy y fechas futuras
     if (date < todayString) {
-      console.error('❌ Fecha rechazada:', { date, todayString, motivo: 'fecha en el pasado' });
       return res.status(400).json({ 
         error: 'Fecha inválida',
         message: `No se pueden crear citas en fechas pasadas. Fecha recibida: ${date}, Fecha hoy: ${todayString}`
       });
     }
-    
-    console.log('✅ Fecha validada correctamente:', date);
 
     // Validar que la hora de fin sea posterior a la de inicio
     if (startTime >= endTime) {
@@ -199,8 +186,6 @@ const createAppointment = async (req, res) => {
     // Enviar notificaciones con todos los datos
     const notificationResults = await sendAppointmentNotification(appointment, patientData, professionalData);
     
-    console.log('📧 Resultados de notificación:', notificationResults);
-
     // Actualizar el flag de notificación enviada
     await appointment.update({ 
       notificationSent: notificationResults.email?.success || notificationResults.whatsapp?.success 
@@ -267,7 +252,7 @@ const createAppointment = async (req, res) => {
  */
 const getAppointments = async (req, res) => {
   try {
-    const { startDate, endDate, professionalId, patientId, status } = req.query;
+    const { startDate, endDate, professionalId, patientId, status, includeCancelled } = req.query;
     const where = {};
 
     if (startDate && endDate) {
@@ -286,6 +271,11 @@ const getAppointments = async (req, res) => {
 
     if (status) {
       where.status = status;
+    } else if (!includeCancelled) {
+      // Por defecto, excluir citas canceladas a menos que se especifique lo contrario
+      where.status = {
+        [Op.ne]: 'cancelled'
+      };
     }
 
     const appointments = await Appointments.findAll({
@@ -511,7 +501,10 @@ const updateAppointment = async (req, res) => {
             cancellationReason || 'No se especificó motivo'
           );
           
-          console.log('📧 Notificación de cancelación enviada:', notificationResults);
+          // Actualizar el flag de notificación enviada
+          await appointment.update({ 
+            notificationSent: notificationResults.email?.success || notificationResults.whatsapp?.success 
+          });
         }
       } catch (notificationError) {
         console.error('❌ Error al enviar notificación de cancelación:', notificationError);
@@ -538,32 +531,11 @@ const updateAppointment = async (req, res) => {
         ]);
 
         if (patient) {
-          console.log('📅 Debug - Datos de cita para notificación:', {
-            appointmentId: appointment.id,
-            originalDate: appointment.date,
-            newDate: date,
-            originalStartTime: appointment.startTime,
-            newStartTime: startTime,
-            originalEndTime: appointment.endTime,
-            newEndTime: endTime,
-            wasRescheduled,
-            wasTimeChanged
-          });
-
-          console.log('📅 Debug - Datos finales para notificación:', {
-            finalDate: appointment.date,
-            finalStartTime: appointment.startTime,
-            finalEndTime: appointment.endTime,
-            finalStatus: appointment.status
-          });
-
           const notificationResults = await sendAppointmentRescheduled(
             appointment, 
             patient, 
             professional
           );
-          
-          console.log('📧 Notificación de reagendado enviada:', notificationResults);
           
           // Actualizar el flag de notificación enviada
           await appointment.update({ 
@@ -687,8 +659,6 @@ const sendAppointmentReminderManual = async (req, res) => {
       reminderSent24h: true // Marcar como enviado manualmente
     });
 
-    console.log('📧 Recordatorio manual enviado:', notificationResults);
-
     res.json({
       message: 'Recordatorio enviado exitosamente',
       results: notificationResults
@@ -741,7 +711,7 @@ const sendAppointmentReminderManual = async (req, res) => {
  */
 const requestAppointment = async (req, res) => {
   try {
-    const { motivo, preferenciaDia, preferenciaHora, notas, fechaSeleccionada, horarioSeleccionado } = req.body;
+    const { motivo, preferenciaDia, preferenciaHora, notas, fechaSeleccionada, horarioSeleccionado, horariosSeleccionados } = req.body;
     const userId = req.user.id;
 
     // Obtener datos del usuario que solicita la cita
@@ -753,7 +723,16 @@ const requestAppointment = async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    // Crear el objeto de solicitud de cita con información detallada del horario
+    // Procesar múltiples horarios si están disponibles
+    let horariosArray = [];
+    if (horariosSeleccionados && Array.isArray(horariosSeleccionados)) {
+      horariosArray = horariosSeleccionados;
+    } else if (horarioSeleccionado) {
+      // Si no hay array pero hay string, dividir por comas
+      horariosArray = horarioSeleccionado.split(',').map(h => h.trim());
+    }
+
+    // Crear el objeto de solicitud de cita con información detallada de múltiples horarios
     const appointmentRequest = {
       motivo,
       preferenciaDia: fechaSeleccionada || preferenciaDia,
@@ -761,19 +740,29 @@ const requestAppointment = async (req, res) => {
       notas: notas || '',
       fechaSeleccionada: fechaSeleccionada || null,
       horarioSeleccionado: horarioSeleccionado || null,
+      horariosSeleccionados: horariosArray, // Array de horarios seleccionados
+      cantidadHorarios: horariosArray.length,
       solicitadoPor: `${user.name} ${user.lastName}`,
       emailSolicitante: user.email,
       telefonoSolicitante: user.phone,
-      tipoSolicitud: fechaSeleccionada && horarioSeleccionado ? 'horario_especifico' : 'preferencia_general'
+      tipoSolicitud: fechaSeleccionada && horariosArray.length > 0 ? 'horarios_especificos' : 'preferencia_general'
     };
 
     // Enviar notificación por email al centro quiropráctico
     const notificationResult = await sendAppointmentRequest(appointmentRequest);
 
     if (notificationResult.success) {
-      const successMessage = fechaSeleccionada && horarioSeleccionado 
-        ? `Solicitud de cita enviada exitosamente para el ${fechaSeleccionada} en el horario ${horarioSeleccionado}. Nos pondremos en contacto contigo pronto para confirmar la disponibilidad.`
-        : 'Solicitud de cita enviada exitosamente. Nos pondremos en contacto contigo pronto.';
+      let successMessage;
+      if (horariosArray.length > 0) {
+        if (horariosArray.length === 1) {
+          successMessage = `Solicitud de cita enviada exitosamente para el ${fechaSeleccionada} en el horario ${horariosArray[0]}. Nos pondremos en contacto contigo pronto para confirmar la disponibilidad.`;
+        } else {
+          const horariosText = horariosArray.join(', ');
+          successMessage = `Solicitud de cita enviada exitosamente para el ${fechaSeleccionada} con ${horariosArray.length} horarios seleccionados: ${horariosText}. Nos pondremos en contacto contigo pronto para confirmar la disponibilidad.`;
+        }
+      } else {
+        successMessage = 'Solicitud de cita enviada exitosamente. Nos pondremos en contacto contigo pronto.';
+      }
         
       res.status(200).json({ 
         message: successMessage,
@@ -845,20 +834,12 @@ const requestAppointment = async (req, res) => {
 const getAvailableSlots = async (req, res) => {
   try {
     const { date, professionalId } = req.query;
-    console.log('🔍 getAvailableSlots - Parámetros recibidos:', { date, professionalId });
     
     // Si no se proporciona fecha, usar la fecha actual
     const targetDate = date || new Date().toISOString().split('T')[0];
-    console.log('📅 Fecha objetivo:', targetDate);
     
     // Validar que la fecha no sea en el pasado - usando comparación de strings para evitar problemas de zona horaria
     const todayString = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
-    
-    console.log('📅 Comparación de fechas:', {
-      targetDate,
-      todayString,
-      comparison: targetDate >= todayString ? 'válida' : 'pasada'
-    });
     
     // Permitir la fecha de hoy y fechas futuras
     if (targetDate < todayString) {
@@ -868,13 +849,10 @@ const getAvailableSlots = async (req, res) => {
       });
     }
 
-    console.log('🔄 Paso 1: Validación de fecha completada');
-
     // Obtener profesionales disponibles
     let professionals = [];
     try {
       if (professionalId) {
-        console.log('🔍 Buscando profesional específico ID:', professionalId);
         const professional = await Users.findByPk(professionalId, {
           attributes: ['id', 'name', 'lastName'],
           where: { isActive: true }
@@ -888,7 +866,6 @@ const getAvailableSlots = async (req, res) => {
           });
         }
       } else {
-        console.log('🔍 Buscando todos los profesionales activos');
         // Obtener todos los profesionales (usuarios con rol admin o staff)
         professionals = await Users.findAll({
           where: {
@@ -912,8 +889,6 @@ const getAvailableSlots = async (req, res) => {
         message: 'No se encontraron profesionales activos en el sistema'
       });
     }
-
-    console.log('✅ Paso 2: Profesionales encontrados:', professionals.map(p => ({ id: p.id, name: `${p.name} ${p.lastName}` })));
 
     // Horario de atención (7:00 AM a 8:00 PM)
     const workingHours = {
@@ -943,8 +918,6 @@ const getAvailableSlots = async (req, res) => {
       }
     }
     
-    console.log('✅ Paso 3: Slots generados:', timeSlots.length);
-    
     if (timeSlots.length === 0) {
       return res.status(500).json({ 
         error: 'Error generando horarios',
@@ -956,7 +929,6 @@ const getAvailableSlots = async (req, res) => {
 
     // Para cada profesional, verificar disponibilidad
     for (const professional of professionals) {
-      console.log(`🔍 Paso 4: Verificando disponibilidad para: ${professional.name} ${professional.lastName} (ID: ${professional.id})`);
       
       try {
         // Obtener citas existentes para este profesional en la fecha seleccionada
@@ -965,22 +937,30 @@ const getAvailableSlots = async (req, res) => {
             professionalId: professional.id,
             date: targetDate,
             status: {
-              [Op.not]: 'cancelled'
+              [Op.not]: 'cancelled' // Solo excluir citas canceladas, incluir rescheduled
             }
           },
-          attributes: ['startTime', 'endTime']
+          attributes: ['startTime', 'endTime', 'status'] // Agregar status para debug
         });
-
-        console.log(`📅 Citas existentes para ${professional.name}:`, existingAppointments.length);
 
         // Verificar cada slot
         for (const slot of timeSlots) {
-          const isAvailable = !existingAppointments.some(appointment => {
+          const conflictingAppointments = existingAppointments.filter(appointment => {
             // Verificar si hay conflicto con citas existentes
-            return (
-              (slot.startTime < appointment.endTime && slot.endTime > appointment.startTime)
-            );
+            // Un slot está ocupado si se superpone con una cita existente
+            // Pero permitimos que las citas sean consecutivas (una termine cuando otra comience)
+            // Convertir a minutos para comparación más precisa
+            const slotStartMinutes = parseInt(slot.startTime.split(':')[0]) * 60 + parseInt(slot.startTime.split(':')[1]);
+            const slotEndMinutes = parseInt(slot.endTime.split(':')[0]) * 60 + parseInt(slot.endTime.split(':')[1]);
+            const appointmentStartMinutes = parseInt(appointment.startTime.split(':')[0]) * 60 + parseInt(appointment.startTime.split(':')[1]);
+            const appointmentEndMinutes = parseInt(appointment.endTime.split(':')[0]) * 60 + parseInt(appointment.endTime.split(':')[1]);
+            
+            // Hay conflicto si el slot se superpone con la cita
+            // Pero permitimos que sean consecutivos (slotStart >= appointmentEnd o slotEnd <= appointmentStart)
+            return !(slotStartMinutes >= appointmentEndMinutes || slotEndMinutes <= appointmentStartMinutes);
           });
+          
+          const isAvailable = conflictingAppointments.length === 0;
 
           availableSlots.push({
             date: targetDate,
@@ -1002,14 +982,6 @@ const getAvailableSlots = async (req, res) => {
     const onlyAvailableSlots = availableSlots
       .filter(slot => slot.available)
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
-
-    console.log('✅ Paso 5: Slots disponibles encontrados:', onlyAvailableSlots.length);
-    console.log('📊 Resumen final:', {
-      fecha: targetDate,
-      totalSlots: availableSlots.length,
-      slotsDisponibles: onlyAvailableSlots.length,
-      profesionales: professionals.length
-    });
 
     res.json({
       date: targetDate,
