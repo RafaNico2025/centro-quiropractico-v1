@@ -16,6 +16,7 @@ export function MainNav() {
       <Link to="/appointments" className="text-sm font-medium transition-colors hover:text-primary">
         Citas
       </Link>
+
       <Link to="/stats" className="text-sm font-medium transition-colors hover:text-primary">
         Estadísticas
       </Link>
