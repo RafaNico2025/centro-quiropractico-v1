@@ -1,6 +1,6 @@
 import { Appointments, Patients, Users } from '../../database/connection.database.js';
 import { Op } from 'sequelize';
-import { sendAppointmentNotification, sendAppointmentCancellation, sendAppointmentReminder, sendAppointmentRequest, sendAppointmentRescheduled } from '../../services/notification.service.js';
+import { sendAppointmentNotification, sendAppointmentCancellation, sendAppointmentReminder, sendAppointmentRequest, sendAppointmentRescheduled, sendAppointmentApproved, sendAppointmentRejected } from '../../services/notification.service.js';
 
 /**
  * @swagger
@@ -716,11 +716,16 @@ const requestAppointment = async (req, res) => {
 
     // Obtener datos del usuario que solicita la cita
     const user = await Users.findByPk(userId, {
-      attributes: ['id', 'name', 'lastName', 'email', 'phone']
+      attributes: ['id', 'name', 'lastName', 'email', 'phone', 'patientId']
     });
 
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Verificar si el usuario tiene un paciente asociado
+    if (!user.patientId) {
+      return res.status(400).json({ error: 'Usuario no tiene un perfil de paciente asociado' });
     }
 
     // Procesar múltiples horarios si están disponibles
@@ -732,52 +737,103 @@ const requestAppointment = async (req, res) => {
       horariosArray = horarioSeleccionado.split(',').map(h => h.trim());
     }
 
-    // Crear el objeto de solicitud de cita con información detallada de múltiples horarios
-    const appointmentRequest = {
-      motivo,
-      preferenciaDia: fechaSeleccionada || preferenciaDia,
-      preferenciaHora: horarioSeleccionado || preferenciaHora,
-      notas: notas || '',
-      fechaSeleccionada: fechaSeleccionada || null,
-      horarioSeleccionado: horarioSeleccionado || null,
-      horariosSeleccionados: horariosArray, // Array de horarios seleccionados
-      cantidadHorarios: horariosArray.length,
-      solicitadoPor: `${user.name} ${user.lastName}`,
-      emailSolicitante: user.email,
-      telefonoSolicitante: user.phone,
-      tipoSolicitud: fechaSeleccionada && horariosArray.length > 0 ? 'horarios_especificos' : 'preferencia_general'
-    };
-
-    // Enviar notificación por email al centro quiropráctico
-    const notificationResult = await sendAppointmentRequest(appointmentRequest);
-
-    if (notificationResult.success) {
-      let successMessage;
-      if (horariosArray.length > 0) {
-        if (horariosArray.length === 1) {
-          successMessage = `Solicitud de cita enviada exitosamente para el ${fechaSeleccionada} en el horario ${horariosArray[0]}. Nos pondremos en contacto contigo pronto para confirmar la disponibilidad.`;
-        } else {
-          const horariosText = horariosArray.join(', ');
-          successMessage = `Solicitud de cita enviada exitosamente para el ${fechaSeleccionada} con ${horariosArray.length} horarios seleccionados: ${horariosText}. Nos pondremos en contacto contigo pronto para confirmar la disponibilidad.`;
-        }
-      } else {
-        successMessage = 'Solicitud de cita enviada exitosamente. Nos pondremos en contacto contigo pronto.';
-      }
+    // Si hay horarios específicos seleccionados, crear solicitudes para cada uno
+    if (fechaSeleccionada && horariosArray.length > 0) {
+      const createdAppointments = [];
+      
+      for (let i = 0; i < horariosArray.length; i++) {
+        const horario = horariosArray[i];
         
-      res.status(200).json({ 
-        message: successMessage,
-        solicitud: appointmentRequest
+        let startTime, endTime;
+        
+        // Si el horario es un objeto con startTime y endTime
+        if (typeof horario === 'object' && horario.startTime && horario.endTime) {
+          startTime = horario.startTime;
+          endTime = horario.endTime;
+        } 
+        // Si el horario es un string en formato "HH:MM - HH:MM"
+        else if (typeof horario === 'string' && horario.includes(' - ')) {
+          [startTime, endTime] = horario.split(' - ');
+        }
+        // Si no se puede procesar el horario, omitir
+        else {
+          console.error('Formato de horario no válido:', horario, typeof horario);
+          continue;
+        }
+        
+        // Crear la solicitud de cita en estado pending
+        const appointment = await Appointments.create({
+          date: fechaSeleccionada,
+          startTime: startTime,
+          endTime: endTime,
+          status: 'pending',
+          requestStatus: 'pending',
+          reason: motivo,
+          notes: notas,
+          patientId: user.patientId,
+          professionalId: 1, // Por defecto, se puede cambiar después
+          priority: 'medium',
+          notificationSent: false,
+          createdBy: userId // Agregar el campo requerido
+        });
+        
+        createdAppointments.push(appointment);
+      }
+
+      // Enviar notificación al centro sobre las nuevas solicitudes
+      const appointmentRequest = {
+        motivo,
+        preferenciaDia: fechaSeleccionada,
+        preferenciaHora: horarioSeleccionado,
+        notas: notas || '',
+        fechaSeleccionada,
+        horarioSeleccionado,
+        horariosSeleccionados: horariosArray,
+        cantidadHorarios: horariosArray.length,
+        solicitadoPor: `${user.name} ${user.lastName}`,
+        emailSolicitante: user.email,
+        telefonoSolicitante: user.phone,
+        tipoSolicitud: 'horarios_especificos'
+      };
+
+      const notificationResult = await sendAppointmentRequest(appointmentRequest);
+
+      return res.status(201).json({
+        success: true,
+        message: `Solicitud${createdAppointments.length > 1 ? 'es' : ''} enviada${createdAppointments.length > 1 ? 's' : ''} exitosamente. ${createdAppointments.length} horario${createdAppointments.length > 1 ? 's' : ''} solicitado${createdAppointments.length > 1 ? 's' : ''}.`,
+        appointments: createdAppointments,
+        notificationResult
       });
     } else {
-      console.error('Error al enviar solicitud:', notificationResult.error);
-      res.status(500).json({ 
-        error: 'Error al enviar la solicitud. Intenta nuevamente o contacta por WhatsApp.' 
+      // Si no hay horarios específicos, solo enviar el email de solicitud general
+      const appointmentRequest = {
+        motivo,
+        preferenciaDia: preferenciaDia,
+        preferenciaHora: preferenciaHora,
+        notas: notas || '',
+        solicitadoPor: `${user.name} ${user.lastName}`,
+        emailSolicitante: user.email,
+        telefonoSolicitante: user.phone,
+        tipoSolicitud: 'preferencia_general'
+      };
+
+      // Enviar notificación por email al centro quiropráctico
+      const notificationResult = await sendAppointmentRequest(appointmentRequest);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Solicitud de cita enviada exitosamente. Nos pondremos en contacto contigo pronto.',
+        notificationResult
       });
     }
 
   } catch (error) {
     console.error('Error al procesar solicitud de cita:', error);
-    res.status(500).json({ message: 'Error interno del servidor' });
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      message: 'No se pudo procesar la solicitud de cita',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -1002,6 +1058,397 @@ const getAvailableSlots = async (req, res) => {
   }
 };
 
+/**
+ * @swagger
+ * /appointments/pending:
+ *   get:
+ *     summary: Obtener todas las solicitudes de citas pendientes
+ *     tags: [Citas]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de solicitudes pendientes
+ *       500:
+ *         description: Error del servidor
+ */
+const getPendingAppointments = async (req, res) => {
+  try {
+    const pendingAppointments = await Appointments.findAll({
+      where: {
+        status: 'pending'
+      },
+      include: [
+        { 
+          model: Patients, 
+          attributes: ['id', 'firstName', 'lastName', 'phone', 'email'],
+          required: true
+        },
+        { 
+          model: Users, 
+          as: 'professional',
+          attributes: ['id', 'name', 'lastName', 'email'],
+          required: false
+        }
+      ],
+      order: [['createdAt', 'ASC']]
+    });
+
+    res.json(pendingAppointments);
+  } catch (error) {
+    console.error('Error al obtener solicitudes pendientes:', error);
+    res.status(500).json({ 
+      message: 'Error al obtener las solicitudes pendientes',
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /appointments/{id}/approve:
+ *   put:
+ *     summary: Aprobar una solicitud de cita
+ *     tags: [Citas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la cita
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               date:
+ *                 type: string
+ *                 description: Nueva fecha propuesta (opcional)
+ *               startTime:
+ *                 type: string
+ *                 description: Nueva hora de inicio propuesta (opcional)
+ *               endTime:
+ *                 type: string
+ *                 description: Nueva hora de fin propuesta (opcional)
+ *               professionalId:
+ *                 type: integer
+ *                 description: ID del profesional asignado
+ *               notes:
+ *                 type: string
+ *                 description: Notas adicionales
+ *     responses:
+ *       200:
+ *         description: Solicitud aprobada exitosamente
+ *       404:
+ *         description: Cita no encontrada
+ *       500:
+ *         description: Error del servidor
+ */
+const approveAppointment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { date, startTime, endTime, professionalId, notes } = req.body;
+    const adminId = req.user.id;
+
+    const appointment = await Appointments.findByPk(id, {
+      include: [
+        { model: Patients, attributes: ['firstName', 'lastName', 'email', 'phone'] },
+        { model: Users, as: 'professional', attributes: ['name', 'lastName'] }
+      ]
+    });
+
+    if (!appointment) {
+      return res.status(404).json({ message: 'Solicitud de cita no encontrada' });
+    }
+
+    if (appointment.status !== 'pending') {
+      return res.status(400).json({ message: 'Esta solicitud ya fue procesada' });
+    }
+
+    // Actualizar la cita con la aprobación
+    const updateData = {
+      status: 'approved',
+      requestStatus: 'approved',
+      approvedBy: adminId,
+      approvedAt: new Date()
+    };
+
+    // Si se proporcionan nuevos datos, actualizarlos
+    if (date) updateData.date = date;
+    if (startTime) updateData.startTime = startTime;
+    if (endTime) updateData.endTime = endTime;
+    if (professionalId) updateData.professionalId = professionalId;
+    if (notes) updateData.notes = notes;
+
+    await appointment.update(updateData);
+
+    // Eliminar otras solicitudes pendientes del mismo paciente para la misma fecha
+    const otherPendingAppointments = await Appointments.findAll({
+      where: {
+        id: { [Op.not]: id }, // Excluir la cita actual
+        patientId: appointment.patientId,
+        date: appointment.date,
+        status: 'pending'
+      }
+    });
+
+    if (otherPendingAppointments.length > 0) {
+      // Eliminar físicamente las otras solicitudes pendientes
+      await Appointments.destroy({
+        where: {
+          id: { [Op.in]: otherPendingAppointments.map(appt => appt.id) }
+        }
+      });
+      
+      console.log(`🗑️ Eliminadas ${otherPendingAppointments.length} solicitudes alternativas para el paciente ${appointment.patientId} en la fecha ${appointment.date}`);
+    }
+
+    // Recargar con los datos actualizados
+    await appointment.reload({
+      include: [
+        { model: Patients, attributes: ['firstName', 'lastName', 'email', 'phone'] },
+        { model: Users, as: 'professional', attributes: ['name', 'lastName'] }
+      ]
+    });
+
+    // Enviar notificación al paciente
+    const patient = appointment.Patient;
+    const professional = appointment.professional;
+    
+    if (patient) {
+      try {
+        const notificationResults = await sendAppointmentApproved(appointment, patient, professional);
+        
+        // Actualizar el flag de notificación enviada
+        await appointment.update({ 
+          notificationSent: notificationResults.email?.success || notificationResults.whatsapp?.success 
+        });
+      } catch (notificationError) {
+        console.error('Error al enviar notificación de aprobación:', notificationError);
+      }
+    }
+
+    res.json({
+      message: 'Solicitud aprobada exitosamente',
+      appointment: appointment,
+      eliminatedAlternatives: otherPendingAppointments.length
+    });
+
+  } catch (error) {
+    console.error('Error al aprobar solicitud:', error);
+    res.status(500).json({ 
+      message: 'Error al aprobar la solicitud',
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /appointments/{id}/reject:
+ *   put:
+ *     summary: Rechazar una solicitud de cita
+ *     tags: [Citas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la cita
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - rejectionReason
+ *             properties:
+ *               rejectionReason:
+ *                 type: string
+ *                 description: Motivo del rechazo
+ *               alternativeOptions:
+ *                 type: string
+ *                 description: Opciones alternativas sugeridas
+ *     responses:
+ *       200:
+ *         description: Solicitud rechazada exitosamente
+ *       404:
+ *         description: Cita no encontrada
+ *       500:
+ *         description: Error del servidor
+ */
+const rejectAppointment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rejectionReason, alternativeOptions } = req.body;
+    const adminId = req.user.id;
+
+    const appointment = await Appointments.findByPk(id, {
+      include: [
+        { model: Patients, attributes: ['firstName', 'lastName', 'email', 'phone'] }
+      ]
+    });
+
+    if (!appointment) {
+      return res.status(404).json({ message: 'Solicitud de cita no encontrada' });
+    }
+
+    if (appointment.status !== 'pending') {
+      return res.status(400).json({ message: 'Esta solicitud ya fue procesada' });
+    }
+
+    // Actualizar la cita con el rechazo
+    await appointment.update({
+      status: 'rejected',
+      requestStatus: 'rejected',
+      rejectionReason: rejectionReason,
+      approvedBy: adminId,
+      approvedAt: new Date(),
+      notes: alternativeOptions ? `${appointment.notes || ''}\n\nOpciones alternativas: ${alternativeOptions}` : appointment.notes
+    });
+
+    // Enviar notificación al paciente
+    const patient = appointment.Patient;
+    
+    if (patient) {
+      try {
+        const notificationResults = await sendAppointmentRejected(appointment, patient, rejectionReason, alternativeOptions);
+        
+        // Actualizar el flag de notificación enviada
+        await appointment.update({ 
+          notificationSent: notificationResults.email?.success || notificationResults.whatsapp?.success 
+        });
+      } catch (notificationError) {
+        console.error('Error al enviar notificación de rechazo:', notificationError);
+      }
+    }
+
+    res.json({
+      message: 'Solicitud rechazada exitosamente',
+      appointment: appointment
+    });
+
+  } catch (error) {
+    console.error('Error al rechazar solicitud:', error);
+    res.status(500).json({ 
+      message: 'Error al rechazar la solicitud',
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * @swagger
+ * /appointments/{id}/schedule:
+ *   put:
+ *     summary: Confirmar y agendar una cita aprobada
+ *     tags: [Citas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la cita
+ *     responses:
+ *       200:
+ *         description: Cita agendada exitosamente
+ *       404:
+ *         description: Cita no encontrada
+ *       500:
+ *         description: Error del servidor
+ */
+const scheduleAppointment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const appointment = await Appointments.findByPk(id, {
+      include: [
+        { model: Patients, attributes: ['firstName', 'lastName', 'email', 'phone'] },
+        { model: Users, as: 'professional', attributes: ['name', 'lastName'] }
+      ]
+    });
+
+    if (!appointment) {
+      return res.status(404).json({ message: 'Cita no encontrada' });
+    }
+
+    if (appointment.status !== 'approved') {
+      return res.status(400).json({ message: 'Esta cita debe estar aprobada para poder ser agendada' });
+    }
+
+    // Verificar disponibilidad del horario
+    const conflictingAppointment = await Appointments.findOne({
+      where: {
+        professionalId: appointment.professionalId,
+        date: appointment.date,
+        status: ['scheduled', 'approved'],
+        id: { [Op.not]: appointment.id },
+        [Op.or]: [
+          {
+            [Op.and]: [
+              { startTime: { [Op.lt]: appointment.endTime } },
+              { endTime: { [Op.gt]: appointment.startTime } }
+            ]
+          }
+        ]
+      }
+    });
+
+    if (conflictingAppointment) {
+      return res.status(409).json({ 
+        message: 'Conflicto de horario',
+        error: 'Ya existe una cita en este horario'
+      });
+    }
+
+    // Actualizar a scheduled
+    await appointment.update({
+      status: 'scheduled'
+    });
+
+    // Enviar notificación de confirmación
+    const patient = appointment.Patient;
+    const professional = appointment.professional;
+    
+    if (patient) {
+      try {
+        const notificationResults = await sendAppointmentNotification(appointment, patient, professional);
+        
+        // Actualizar el flag de notificación enviada
+        await appointment.update({ 
+          notificationSent: notificationResults.email?.success || notificationResults.whatsapp?.success 
+        });
+      } catch (notificationError) {
+        console.error('Error al enviar notificación de confirmación:', notificationError);
+      }
+    }
+
+    res.json({
+      message: 'Cita agendada exitosamente',
+      appointment: appointment
+    });
+
+  } catch (error) {
+    console.error('Error al agendar cita:', error);
+    res.status(500).json({ 
+      message: 'Error al agendar la cita',
+      error: error.message 
+    });
+  }
+};
+
 export {
   createAppointment,
   getAppointments,
@@ -1010,5 +1457,9 @@ export {
   deleteAppointment,
   sendAppointmentReminderManual,
   requestAppointment,
-  getAvailableSlots
+  getAvailableSlots,
+  getPendingAppointments,
+  approveAppointment,
+  rejectAppointment,
+  scheduleAppointment
 }; 

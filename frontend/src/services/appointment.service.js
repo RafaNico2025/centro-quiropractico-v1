@@ -120,5 +120,61 @@ export const appointmentService = {
                           'Error al obtener horarios disponibles';
       throw new Error(errorMessage);
     }
+  },
+
+  // Obtener solicitudes pendientes
+  getPending: async () => {
+    try {
+      const response = await api.get('/appointments/pending');
+      return response.data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error al obtener solicitudes pendientes';
+      throw new Error(errorMessage);
+    }
+  },
+
+  // Aprobar una solicitud de cita
+  approve: async (id, appointmentData = {}) => {
+    try {
+      const response = await api.put(`/appointments/${id}/approve`, appointmentData);
+      return response.data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error al aprobar la solicitud';
+      throw new Error(errorMessage);
+    }
+  },
+
+  // Rechazar una solicitud de cita
+  reject: async (id, rejectionData) => {
+    try {
+      const response = await api.put(`/appointments/${id}/reject`, rejectionData);
+      return response.data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error al rechazar la solicitud';
+      throw new Error(errorMessage);
+    }
+  },
+
+  // Agendar una cita aprobada
+  schedule: async (id) => {
+    try {
+      const response = await api.put(`/appointments/${id}/schedule`);
+      return response.data;
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error al agendar la cita';
+      throw new Error(errorMessage);
+    }
   }
 }; 

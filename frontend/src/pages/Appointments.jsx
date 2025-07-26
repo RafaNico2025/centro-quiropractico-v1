@@ -1,38 +1,48 @@
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../components/ui/alert-dialog'
+import AppointmentCalendar from '../components/AppointmentCalendar'
+import AppointmentForm from '../components/AppointmentForm'
+import NewIncomeForm from '../components/NewIncomeForm'
+import PendingAppointmentsTab from '../components/PendingAppointmentsTab'
 import { appointmentService } from '../services/appointment.service'
 import { useToast } from '../components/ui/use-toast'
+import { Calendar, Clock, User, Phone, Mail, MessageSquare, Check, X, RotateCcw, UserX, Edit, ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { AppointmentForm } from '../components/AppointmentForm'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
-import { AppointmentCalendar } from '../components/AppointmentCalendar'
 import { useAuth } from '../context/AuthContext'
-import { NewIncomeForm } from '../components/NewIncomeForm' // Importar el formulario de ingresos
 
 // Componente para mostrar el estado del turno
 const StatusLabel = ({ status }) => {
   const statusStyles = {
-    scheduled: 'bg-blue-100 text-blue-800',
-    completed: 'bg-green-100 text-green-800',
+    pending: 'bg-yellow-100 text-yellow-800',
+    approved: 'bg-blue-100 text-blue-800',
+    scheduled: 'bg-green-100 text-green-800',
+    completed: 'bg-emerald-100 text-emerald-800',
     cancelled: 'bg-red-100 text-red-800',
-    no_show: 'bg-yellow-100 text-yellow-800',
-    rescheduled: 'bg-purple-100 text-purple-800'
+    no_show: 'bg-orange-100 text-orange-800',
+    rescheduled: 'bg-purple-100 text-purple-800',
+    rejected: 'bg-gray-100 text-gray-800'
   }
 
   const statusText = {
-    scheduled: 'Programado',
-    completed: 'Completado',
-    cancelled: 'Cancelado',
+    pending: 'Pendiente',
+    approved: 'Aprobada',
+    scheduled: 'Agendada',
+    completed: 'Completada',
+    cancelled: 'Cancelada',
     no_show: 'No Asistió',
-    rescheduled: 'Reagendado'
+    rescheduled: 'Reagendada',
+    rejected: 'Rechazada'
   }
 
   return (
-    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusStyles[status]}`}>
-      {statusText[status]}
+    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>
+      {statusText[status] || status}
     </span>
   )
 }
@@ -55,8 +65,17 @@ export default function Appointments() {
 
   const loadAppointments = async () => {
     try {
-      const data = await appointmentService.getAll()
+      const data = await appointmentService.getAll({ includeCancelled: true })
       setAppointments(data)
+      
+      // Log temporal para verificar citas canceladas
+      const cancelledCount = data.filter(a => a.status === 'cancelled').length
+      console.log('🔄 Citas cargadas:', {
+        total: data.length,
+        canceladas: cancelledCount,
+        estados: [...new Set(data.map(a => a.status))]
+      })
+      
     } catch (error) {
       toast({
         title: "Error",
@@ -197,6 +216,25 @@ export default function Appointments() {
     }
   }
 
+  const handleScheduleAppointment = async (appointmentId) => {
+    try {
+      await appointmentService.schedule(appointmentId)
+      await loadAppointments() // Recargar las citas
+      toast({
+        title: "✅ Cita agendada",
+        description: "La cita ha sido agendada oficialmente",
+        duration: 3000
+      })
+    } catch (error) {
+      toast({
+        title: "❌ Error",
+        description: "No se pudo agendar la cita. Intenta nuevamente.",
+        variant: "destructive",
+        duration: 5000
+      })
+    }
+  }
+
   const getTodayAppointments = () => {
     const today = new Date()
     const todayString = today.toISOString().split('T')[0]
@@ -206,24 +244,17 @@ export default function Appointments() {
   const getUpcomingAppointments = () => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    console.log('Fecha de hoy:', today)
+    
+    // Estados que excluimos de próximas citas (finalizadas/problemáticas)
+    const excludedStatuses = ['cancelled', 'rejected', 'no_show', 'completed']
     
     return appointments.filter(appointment => {
       const appointmentDate = new Date(appointment.date)
       appointmentDate.setHours(0, 0, 0, 0)
-      console.log('Cita:', {
-        fecha: appointmentDate,
-        estado: appointment.status,
-        esFutura: appointmentDate.getTime() > today.getTime(),
-        noCancelada: appointment.status !== 'cancelled'
-      })
       
-      // Ajustamos la comparación de fechas para considerar la zona horaria
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
       return (
         appointmentDate.getTime() >= today.getTime() && 
-        appointment.status !== 'cancelled'
+        !excludedStatuses.includes(appointment.status)
       )
     })
   }
@@ -307,10 +338,18 @@ export default function Appointments() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-3xl font-bold">Citas</h1>
+          <h1 className="text-3xl font-bold">Gestión de Citas</h1>
         </div>
         <Button onClick={() => setShowForm(true)}>Nueva Cita</Button>
       </div>
+      
+      <Tabs defaultValue="calendar" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="calendar">📅 Calendario</TabsTrigger>
+          <TabsTrigger value="pending">📋 Solicitudes</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="calendar" className="space-y-6 mt-6">
 
       {/* Resumen de estadísticas rápidas */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
@@ -355,7 +394,7 @@ export default function Appointments() {
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Citas de Hoy</CardTitle>
+            <CardTitle>Citas de Hoy - {format(new Date(), 'PPP', { locale: es })}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -371,6 +410,15 @@ export default function Appointments() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    {appointment.status === 'approved' && (
+                      <Button 
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handleScheduleAppointment(appointment.id)}
+                      >
+                        📅 Agendar Oficialmente
+                      </Button>
+                    )}
                     {(appointment.status === 'scheduled' || appointment.status === 'rescheduled') && (
                       <>
                         <Button 
@@ -406,6 +454,9 @@ export default function Appointments() {
                         </Button>
                       </>
                     )}
+                    {appointment.status === 'pending' && (
+                      <span className="text-sm text-yellow-600 font-medium">⏳ Pendiente</span>
+                    )}
                     {appointment.status === 'completed' && (
                       <span className="text-sm text-green-600 font-medium">✓ Completada</span>
                     )}
@@ -414,6 +465,9 @@ export default function Appointments() {
                     )}
                     {appointment.status === 'no_show' && (
                       <span className="text-sm text-yellow-600 font-medium">⚠ No Asistió</span>
+                    )}
+                    {appointment.status === 'rejected' && (
+                      <span className="text-sm text-gray-600 font-medium">❌ Rechazada</span>
                     )}
                   </div>
                 </div>
@@ -444,6 +498,15 @@ export default function Appointments() {
                     <p className="text-sm text-muted-foreground">{appointment.reason}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    {appointment.status === 'approved' && (
+                      <Button 
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handleScheduleAppointment(appointment.id)}
+                      >
+                        📅 Agendar Oficialmente
+                      </Button>
+                    )}
                     {(appointment.status === 'scheduled' || appointment.status === 'rescheduled') && (
                       <>
                         <Button 
@@ -472,6 +535,9 @@ export default function Appointments() {
                         </Button>
                       </>
                     )}
+                    {appointment.status === 'pending' && (
+                      <span className="text-sm text-yellow-600 font-medium">⏳ Pendiente de revisión</span>
+                    )}
                     {appointment.status === 'completed' && (
                       <span className="text-sm text-green-600 font-medium">✓ Completada</span>
                     )}
@@ -483,6 +549,9 @@ export default function Appointments() {
                     )}
                     {appointment.status === 'rescheduled' && (
                       <span className="text-sm text-purple-600 font-medium">📅 Reagendada</span>
+                    )}
+                    {appointment.status === 'rejected' && (
+                      <span className="text-sm text-gray-600 font-medium">❌ Rechazada</span>
                     )}
                   </div>
                 </div>
@@ -527,7 +596,7 @@ export default function Appointments() {
           <CardHeader>
             <CardTitle>Gestión de Citas</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Administra el estado de todas tus citas
+              Administra el estado de tus citas confirmadas y activas
             </p>
           </CardHeader>
           <CardContent>
@@ -573,12 +642,26 @@ export default function Appointments() {
                 >
                   No Asistió
                 </Button>
+
+                <Button 
+                  variant={filtroEstado === 'pending' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFiltroEstado('pending')}
+                  className="bg-orange-100 text-orange-800 hover:bg-orange-200"
+                >
+                  Pendientes
+                </Button>
               </div>
 
               {/* Lista de citas filtradas */}
               <div className="space-y-3">
                 {appointments
-                  .filter(appointment => !filtroEstado || appointment.status === filtroEstado)
+                  .filter(appointment => {
+                    // Excluir rechazadas de la gestión principal
+                    if (appointment.status === 'rejected') return false
+                    // Aplicar filtro de estado si existe
+                    return !filtroEstado || appointment.status === filtroEstado
+                  })
                   .sort((a, b) => new Date(b.date) - new Date(a.date))
                   .slice(0, 10) // Mostrar solo las últimas 10
                   .map((appointment) => (
@@ -629,7 +712,11 @@ export default function Appointments() {
                     </div>
                   </div>
                 ))}
-                {appointments.filter(appointment => !filtroEstado || appointment.status === filtroEstado).length === 0 && (
+                {appointments
+                  .filter(appointment => {
+                    if (appointment.status === 'rejected') return false
+                    return !filtroEstado || appointment.status === filtroEstado
+                  }).length === 0 && (
                   <p className="text-center text-muted-foreground py-8">
                     No hay citas con el estado seleccionado
                   </p>
@@ -639,6 +726,15 @@ export default function Appointments() {
           </CardContent>
         </Card>
       </div>
+
+        </TabsContent>
+        
+        <TabsContent value="pending" className="space-y-6 mt-6">
+          <PendingAppointmentsTab />
+        </TabsContent>
+        
+
+      </Tabs>
 
       <AppointmentForm
         open={showForm}

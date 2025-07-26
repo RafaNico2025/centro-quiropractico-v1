@@ -30,10 +30,15 @@ const customCalendarStyles = {
 }
 
 export function AppointmentCalendar({ appointments, onSelectEvent, showCancelled = false }) {
-  // Filtrar las citas - por defecto no mostrar las canceladas
+  // Filtrar las citas - por defecto no mostrar las canceladas ni rechazadas
   const filteredAppointments = appointments.filter(appointment => {
+    // Siempre excluir rechazadas porque no son citas reales
+    if (appointment.status === 'rejected') {
+      return false;
+    }
+    
     if (showCancelled) {
-      return true; // Mostrar todas las citas
+      return true; // Mostrar todas las citas excepto rechazadas
     }
     return appointment.status !== 'cancelled'; // Ocultar citas canceladas
   });
@@ -347,4 +352,6 @@ export function AppointmentCalendar({ appointments, onSelectEvent, showCancelled
       </div>
     </>
   )
-} 
+}
+
+export default AppointmentCalendar 

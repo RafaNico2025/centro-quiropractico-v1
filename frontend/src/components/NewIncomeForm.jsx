@@ -239,3 +239,5 @@ export function NewIncomeForm({ open, onOpenChange, onSuccess, onPatientsUpdate,
     </Dialog>
   )
 }
+
+export default NewIncomeForm

@@ -658,9 +658,20 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
     let horariosDisplay = '';
     if (horariosSeleccionados && Array.isArray(horariosSeleccionados)) {
       if (horariosSeleccionados.length === 1) {
-        horariosDisplay = horariosSeleccionados[0];
+        const horario = horariosSeleccionados[0];
+        if (typeof horario === 'object' && horario.startTime && horario.endTime) {
+          horariosDisplay = `${horario.startTime} - ${horario.endTime}`;
+        } else {
+          horariosDisplay = horario;
+        }
       } else {
-        horariosDisplay = horariosSeleccionados.map((h, index) => `${index + 1}. ${h}`).join('<br>');
+        horariosDisplay = horariosSeleccionados.map((h, index) => {
+          if (typeof h === 'object' && h.startTime && h.endTime) {
+            return `${index + 1}. ${h.startTime} - ${h.endTime}`;
+          } else {
+            return `${index + 1}. ${h}`;
+          }
+        }).join('<br>');
       }
     } else if (horarioSeleccionado) {
       horariosDisplay = horarioSeleccionado;
@@ -935,5 +946,267 @@ export const sendAppointmentRequest = async (appointmentRequest) => {
       success: false,
       error: error.message
     };
+  }
+}; 
+
+// Función para enviar notificación de cita aprobada
+export const sendAppointmentApproved = async (appointment, patient, professional) => {
+  try {
+    const appointmentDate = new Date(appointment.date);
+    const formattedDate = appointmentDate.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const startTime = appointment.startTime ? appointment.startTime.slice(0, 5) : 'No especificado';
+    const endTime = appointment.endTime ? appointment.endTime.slice(0, 5) : 'No especificado';
+
+    // Template de email para aprobación
+    const emailTemplate = {
+      subject: '✅ Tu solicitud de cita ha sido aprobada - Centro Quiropráctico',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #22c55e; margin: 0;">¡Solicitud Aprobada!</h1>
+          </div>
+          
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="color: #1f2937; margin-top: 0;">Hola ${patient.firstName},</h2>
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
+              ¡Excelentes noticias! Tu solicitud de cita ha sido <strong style="color: #22c55e;">aprobada</strong>.
+            </p>
+          </div>
+
+          <div style="background-color: #ffffff; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: #1f2937; margin-top: 0;">📅 Detalles de tu cita:</h3>
+            <div style="color: #4b5563;">
+              <p><strong>📍 Fecha:</strong> ${formattedDate}</p>
+              <p><strong>🕒 Horario:</strong> ${startTime} - ${endTime}</p>
+              <p><strong>👩‍⚕️ Profesional:</strong> ${professional ? `${professional.name} ${professional.lastName}` : 'Por asignar'}</p>
+              <p><strong>📝 Motivo:</strong> ${appointment.reason || 'Consulta general'}</p>
+              ${appointment.notes ? `<p><strong>📋 Notas:</strong> ${appointment.notes}</p>` : ''}
+            </div>
+          </div>
+
+          <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #92400e;">
+              <strong>⏰ Próximo paso:</strong> Tu cita será confirmada y agendada oficialmente. 
+              Recibirás una notificación adicional con los detalles finales.
+            </p>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="color: #6b7280; font-size: 14px;">
+              Si tienes alguna pregunta, no dudes en contactarnos.
+            </p>
+          </div>
+
+          <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+              Centro Quiropráctico - Cuidamos tu bienestar
+            </p>
+          </div>
+        </div>
+      `
+    };
+
+    // Mensaje de WhatsApp para aprobación
+    const whatsappMessage = `🎉 ¡Hola ${patient.firstName}! 
+
+✅ Tu solicitud de cita ha sido *APROBADA*
+
+📅 *Detalles de tu cita:*
+• Fecha: ${formattedDate}
+• Horario: ${startTime} - ${endTime}
+• Profesional: ${professional ? `${professional.name} ${professional.lastName}` : 'Por asignar'}
+
+⏰ *Próximo paso:* Tu cita será confirmada y agendada oficialmente. Recibirás otra notificación con los detalles finales.
+
+¡Gracias por confiar en nosotros! 🙏
+
+_Centro Quiropráctico_`;
+
+    const results = {};
+
+    // Enviar email
+    if (patient.email) {
+      try {
+        const emailResult = await sendEmailNotification(patient.email, emailTemplate.subject, emailTemplate.html);
+        results.email = {
+          success: emailResult.success,
+          messageId: emailResult.messageId,
+          recipient: patient.email
+        };
+      } catch (emailError) {
+        console.error('Error enviando email de aprobación:', emailError);
+        results.email = {
+          success: false,
+          error: emailError.message,
+          recipient: patient.email
+        };
+      }
+    }
+
+    // Enviar WhatsApp
+    if (patient.phone) {
+      try {
+        const whatsappResult = await sendWhatsAppNotification(patient.phone, whatsappMessage);
+        results.whatsapp = {
+          success: whatsappResult.success,
+          messageId: whatsappResult.messageId,
+          recipient: patient.phone
+        };
+      } catch (whatsappError) {
+        console.error('Error enviando WhatsApp de aprobación:', whatsappError);
+        results.whatsapp = {
+          success: false,
+          error: whatsappError.message,
+          recipient: patient.phone
+        };
+      }
+    }
+
+    return results;
+
+  } catch (error) {
+    console.error('Error en sendAppointmentApproved:', error);
+    throw error;
+  }
+};
+
+// Función para enviar notificación de cita rechazada
+export const sendAppointmentRejected = async (appointment, patient, rejectionReason, alternativeOptions) => {
+  try {
+    const appointmentDate = new Date(appointment.date);
+    const formattedDate = appointmentDate.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const startTime = appointment.startTime ? appointment.startTime.slice(0, 5) : 'No especificado';
+    const endTime = appointment.endTime ? appointment.endTime.slice(0, 5) : 'No especificado';
+
+    // Template de email para rechazo
+    const emailTemplate = {
+      subject: '📋 Actualización sobre tu solicitud de cita - Centro Quiropráctico',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #ef4444; margin: 0;">Actualización de Solicitud</h1>
+          </div>
+          
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="color: #1f2937; margin-top: 0;">Hola ${patient.firstName},</h2>
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
+              Hemos revisado tu solicitud de cita para el <strong>${formattedDate}</strong> 
+              de ${startTime} a ${endTime}.
+            </p>
+          </div>
+
+          <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 20px;">
+            <h3 style="color: #dc2626; margin-top: 0;">📋 Motivo:</h3>
+            <p style="margin: 0; color: #7f1d1d;">${rejectionReason}</p>
+          </div>
+
+          ${alternativeOptions ? `
+          <div style="background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 15px; margin-bottom: 20px;">
+            <h3 style="color: #1d4ed8; margin-top: 0;">💡 Opciones alternativas:</h3>
+            <p style="margin: 0; color: #1e3a8a;">${alternativeOptions}</p>
+          </div>
+          ` : ''}
+
+          <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #166534;">
+              <strong>📞 ¿Qué puedes hacer?</strong><br>
+              • Puedes solicitar una nueva cita con diferentes horarios<br>
+              • Contactarnos por WhatsApp para coordinar personalmente<br>
+              • Llamarnos para encontrar la mejor opción para ti
+            </p>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="color: #6b7280; font-size: 14px;">
+              Estamos aquí para ayudarte. No dudes en contactarnos para encontrar 
+              la mejor solución para tu consulta.
+            </p>
+          </div>
+
+          <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+              Centro Quiropráctico - Cuidamos tu bienestar
+            </p>
+          </div>
+        </div>
+      `
+    };
+
+    // Mensaje de WhatsApp para rechazo
+    const whatsappMessage = `📋 Hola ${patient.firstName},
+
+Hemos revisado tu solicitud de cita para el *${formattedDate}* de ${startTime} a ${endTime}.
+
+❗ *Motivo:* ${rejectionReason}
+
+${alternativeOptions ? `💡 *Opciones alternativas:*
+${alternativeOptions}
+
+` : ''}📞 *¿Qué puedes hacer?*
+• Solicitar una nueva cita con diferentes horarios
+• Contactarnos por WhatsApp para coordinar
+• Llamarnos para encontrar la mejor opción
+
+Estamos aquí para ayudarte 🙏
+
+_Centro Quiropráctico_`;
+
+    const results = {};
+
+    // Enviar email
+    if (patient.email) {
+      try {
+        const emailResult = await sendEmailNotification(patient.email, emailTemplate.subject, emailTemplate.html);
+        results.email = {
+          success: emailResult.success,
+          messageId: emailResult.messageId,
+          recipient: patient.email
+        };
+      } catch (emailError) {
+        console.error('Error enviando email de rechazo:', emailError);
+        results.email = {
+          success: false,
+          error: emailError.message,
+          recipient: patient.email
+        };
+      }
+    }
+
+    // Enviar WhatsApp
+    if (patient.phone) {
+      try {
+        const whatsappResult = await sendWhatsAppNotification(patient.phone, whatsappMessage);
+        results.whatsapp = {
+          success: whatsappResult.success,
+          messageId: whatsappResult.messageId,
+          recipient: patient.phone
+        };
+      } catch (whatsappError) {
+        console.error('Error enviando WhatsApp de rechazo:', whatsappError);
+        results.whatsapp = {
+          success: false,
+          error: whatsappError.message,
+          recipient: patient.phone
+        };
+      }
+    }
+
+    return results;
+
+  } catch (error) {
+    console.error('Error en sendAppointmentRejected:', error);
+    throw error;
   }
 }; 

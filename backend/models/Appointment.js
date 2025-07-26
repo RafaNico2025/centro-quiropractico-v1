@@ -21,8 +21,28 @@ const Appointment = (sequelize) =>
       allowNull: false
     },
     status: {
-      type: DataTypes.ENUM('scheduled', 'completed', 'cancelled', 'no_show', 'rescheduled'),
-      defaultValue: 'scheduled'
+      type: DataTypes.ENUM('pending', 'approved', 'scheduled', 'completed', 'cancelled', 'no_show', 'rescheduled', 'rejected'),
+      defaultValue: 'pending'
+    },
+    requestStatus: {
+      type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+      defaultValue: 'pending'
+    },
+    rejectionReason: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    approvedBy: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Users',
+        key: 'id'
+      }
+    },
+    approvedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
     },
     reason: {
       type: DataTypes.TEXT,

@@ -14,6 +14,7 @@ import ClinicalRecords from './pages/ClinicalRecords'
 import Stats from './pages/Stats'
 import Accounting from './pages/Accounting'
 import Appointments from './pages/Appointments'
+
 import About from './pages/About'
 import Services from './pages/Services'
 import Contact from './pages/Contact'
@@ -93,6 +94,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
         </Routes>
         <Toaster />
       </Router>
