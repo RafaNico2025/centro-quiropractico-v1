@@ -440,4 +440,6 @@ export function AppointmentForm({ open, onOpenChange, onSuccess, appointment, on
       </DialogContent>
     </Dialog>
   )
-} 
+}
+
+export default AppointmentForm 

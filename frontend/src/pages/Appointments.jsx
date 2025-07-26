@@ -4,13 +4,9 @@ import { Button } from '../components/ui/button'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../components/ui/alert-dialog'
-import * as AppointmentCalendarModule from '../components/AppointmentCalendar'
-import * as AppointmentFormModule from '../components/AppointmentForm'
-import * as NewIncomeFormModule from '../components/NewIncomeForm'
-
-const AppointmentCalendar = AppointmentCalendarModule.AppointmentCalendar
-const AppointmentForm = AppointmentFormModule.AppointmentForm
-const NewIncomeForm = NewIncomeFormModule.NewIncomeForm
+import AppointmentCalendar from '../components/AppointmentCalendar'
+import AppointmentForm from '../components/AppointmentForm'
+import NewIncomeForm from '../components/NewIncomeForm'
 import PendingAppointmentsTab from '../components/PendingAppointmentsTab'
 import { appointmentService } from '../services/appointment.service'
 import { useToast } from '../components/ui/use-toast'
@@ -69,8 +65,17 @@ export default function Appointments() {
 
   const loadAppointments = async () => {
     try {
-      const data = await appointmentService.getAll()
+      const data = await appointmentService.getAll({ includeCancelled: true })
       setAppointments(data)
+      
+      // Log temporal para verificar citas canceladas
+      const cancelledCount = data.filter(a => a.status === 'cancelled').length
+      console.log('🔄 Citas cargadas:', {
+        total: data.length,
+        canceladas: cancelledCount,
+        estados: [...new Set(data.map(a => a.status))]
+      })
+      
     } catch (error) {
       toast({
         title: "Error",
@@ -239,24 +244,17 @@ export default function Appointments() {
   const getUpcomingAppointments = () => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    console.log('Fecha de hoy:', today)
+    
+    // Estados que excluimos de próximas citas (finalizadas/problemáticas)
+    const excludedStatuses = ['cancelled', 'rejected', 'no_show', 'completed']
     
     return appointments.filter(appointment => {
       const appointmentDate = new Date(appointment.date)
       appointmentDate.setHours(0, 0, 0, 0)
-      console.log('Cita:', {
-        fecha: appointmentDate,
-        estado: appointment.status,
-        esFutura: appointmentDate.getTime() > today.getTime(),
-        noCancelada: appointment.status !== 'cancelled'
-      })
       
-      // Ajustamos la comparación de fechas para considerar la zona horaria
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
       return (
         appointmentDate.getTime() >= today.getTime() && 
-        appointment.status !== 'cancelled'
+        !excludedStatuses.includes(appointment.status)
       )
     })
   }
@@ -346,10 +344,9 @@ export default function Appointments() {
       </div>
       
       <Tabs defaultValue="calendar" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="calendar">📅 Calendario</TabsTrigger>
           <TabsTrigger value="pending">📋 Solicitudes</TabsTrigger>
-          <TabsTrigger value="today">📍 Hoy</TabsTrigger>
         </TabsList>
         
         <TabsContent value="calendar" className="space-y-6 mt-6">
@@ -397,7 +394,7 @@ export default function Appointments() {
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Citas de Hoy</CardTitle>
+            <CardTitle>Citas de Hoy - {format(new Date(), 'PPP', { locale: es })}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -413,6 +410,15 @@ export default function Appointments() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    {appointment.status === 'approved' && (
+                      <Button 
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handleScheduleAppointment(appointment.id)}
+                      >
+                        📅 Agendar Oficialmente
+                      </Button>
+                    )}
                     {(appointment.status === 'scheduled' || appointment.status === 'rescheduled') && (
                       <>
                         <Button 
@@ -448,6 +454,9 @@ export default function Appointments() {
                         </Button>
                       </>
                     )}
+                    {appointment.status === 'pending' && (
+                      <span className="text-sm text-yellow-600 font-medium">⏳ Pendiente</span>
+                    )}
                     {appointment.status === 'completed' && (
                       <span className="text-sm text-green-600 font-medium">✓ Completada</span>
                     )}
@@ -456,6 +465,9 @@ export default function Appointments() {
                     )}
                     {appointment.status === 'no_show' && (
                       <span className="text-sm text-yellow-600 font-medium">⚠ No Asistió</span>
+                    )}
+                    {appointment.status === 'rejected' && (
+                      <span className="text-sm text-gray-600 font-medium">❌ Rechazada</span>
                     )}
                   </div>
                 </div>
@@ -584,7 +596,7 @@ export default function Appointments() {
           <CardHeader>
             <CardTitle>Gestión de Citas</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Administra el estado de todas tus citas
+              Administra el estado de tus citas confirmadas y activas
             </p>
           </CardHeader>
           <CardContent>
@@ -630,12 +642,26 @@ export default function Appointments() {
                 >
                   No Asistió
                 </Button>
+
+                <Button 
+                  variant={filtroEstado === 'pending' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFiltroEstado('pending')}
+                  className="bg-orange-100 text-orange-800 hover:bg-orange-200"
+                >
+                  Pendientes
+                </Button>
               </div>
 
               {/* Lista de citas filtradas */}
               <div className="space-y-3">
                 {appointments
-                  .filter(appointment => !filtroEstado || appointment.status === filtroEstado)
+                  .filter(appointment => {
+                    // Excluir rechazadas de la gestión principal
+                    if (appointment.status === 'rejected') return false
+                    // Aplicar filtro de estado si existe
+                    return !filtroEstado || appointment.status === filtroEstado
+                  })
                   .sort((a, b) => new Date(b.date) - new Date(a.date))
                   .slice(0, 10) // Mostrar solo las últimas 10
                   .map((appointment) => (
@@ -686,7 +712,11 @@ export default function Appointments() {
                     </div>
                   </div>
                 ))}
-                {appointments.filter(appointment => !filtroEstado || appointment.status === filtroEstado).length === 0 && (
+                {appointments
+                  .filter(appointment => {
+                    if (appointment.status === 'rejected') return false
+                    return !filtroEstado || appointment.status === filtroEstado
+                  }).length === 0 && (
                   <p className="text-center text-muted-foreground py-8">
                     No hay citas con el estado seleccionado
                   </p>
@@ -703,94 +733,7 @@ export default function Appointments() {
           <PendingAppointmentsTab />
         </TabsContent>
         
-        <TabsContent value="today" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Citas de Hoy</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {getTodayAppointments().map((appointment) => (
-                  <div key={appointment.id} className="flex items-center justify-between border-b pb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium">{appointment.Patient?.firstName} {appointment.Patient?.lastName}</p>
-                        <StatusLabel status={appointment.status} />
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {formatTime(appointment.startTime)} - {appointment.reason}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {appointment.status === 'approved' && (
-                        <Button 
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700"
-                          onClick={() => handleScheduleAppointment(appointment.id)}
-                        >
-                          📅 Agendar Oficialmente
-                        </Button>
-                      )}
-                      {(appointment.status === 'scheduled' || appointment.status === 'rescheduled') && (
-                        <>
-                          <Button 
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700"
-                            onClick={() => handleStatusChange(appointment.id, 'completed')}
-                          >
-                            ✓ Atendido
-                          </Button>
-                          <Button 
-                            size="sm"
-                            variant="outline" 
-                            className="border-blue-500 text-blue-700 hover:bg-blue-50"
-                            onClick={() => handleStatusChange(appointment.id, 'rescheduled')}
-                          >
-                            📅 Reagendar
-                          </Button>
-                          <Button 
-                            size="sm"
-                            variant="outline" 
-                            className="border-yellow-500 text-yellow-700 hover:bg-yellow-50"
-                            onClick={() => handleStatusChange(appointment.id, 'no_show')}
-                          >
-                            ⚠ No Asistió
-                          </Button>
-                          <Button 
-                            size="sm"
-                            variant="outline" 
-                            className="border-red-500 text-red-700 hover:bg-red-50"
-                            onClick={() => handleStatusChange(appointment.id, 'cancelled')}
-                          >
-                            ✕ Cancelar
-                          </Button>
-                        </>
-                      )}
-                      {appointment.status === 'pending' && (
-                        <span className="text-sm text-yellow-600 font-medium">⏳ Pendiente</span>
-                      )}
-                      {appointment.status === 'completed' && (
-                        <span className="text-sm text-green-600 font-medium">✓ Completada</span>
-                      )}
-                      {appointment.status === 'cancelled' && (
-                        <span className="text-sm text-red-600 font-medium">✕ Cancelada</span>
-                      )}
-                      {appointment.status === 'no_show' && (
-                        <span className="text-sm text-yellow-600 font-medium">⚠ No Asistió</span>
-                      )}
-                      {appointment.status === 'rejected' && (
-                        <span className="text-sm text-gray-600 font-medium">❌ Rechazada</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {getTodayAppointments().length === 0 && (
-                  <p className="text-center text-muted-foreground">No hay citas programadas para hoy</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+
       </Tabs>
 
       <AppointmentForm
