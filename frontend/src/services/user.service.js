@@ -26,15 +26,17 @@ export const userService = {
     }
   },
 
-  // Obtener todos los profesionales
+  // Obtener lista de profesionales
   getProfessionals: async () => {
     try {
-      const response = await api.get('/users/professionals')
-      console.log('Respuesta de profesionales:', response.data)
-      return response.data
+      const response = await api.get('/users/professionals');
+      return response.data;
     } catch (error) {
-      console.error('Error al obtener profesionales:', error)
-      throw error.response?.data || error.message
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error al obtener profesionales';
+      throw new Error(errorMessage);
     }
   }
 } 

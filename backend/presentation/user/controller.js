@@ -245,16 +245,29 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { Username, Password, Nombre, Apellido, Telefono, Email, Role } = req.body;
+    const { 
+      Username, Password, Nombre, Apellido, Telefono, Email, Role,
+      username, password, name, lastName, phone, email, role,
+      patientId, isActive
+    } = req.body;
 
     const user = await Users.findByPk(id);
     if (!user) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
+    // Usar nombres en español o inglés (compatibilidad)
+    const finalUsername = Username || username;
+    const finalName = Nombre || name;
+    const finalLastName = Apellido || lastName;
+    const finalPhone = Telefono || phone;
+    const finalEmail = Email || email;
+    const finalRole = Role || role;
+    const finalPassword = Password || password;
+
     // Si se cambia el username, verificar que no exista
-    if (Username && Username !== user.username) {
-      const existingUser = await Users.findOne({ where: { username: Username } });
+    if (finalUsername && finalUsername !== user.username) {
+      const existingUser = await Users.findOne({ where: { username: finalUsername } });
       if (existingUser) {
         return res.status(400).json({ message: 'El nombre de usuario ya existe' });
       }
@@ -262,19 +275,26 @@ const updateUser = async (req, res) => {
 
     // Si se cambia la contraseña, encriptarla
     let hashedPassword = user.password;
-    if (Password) {
-      hashedPassword = await bcrypt.hash(Password, 10);
+    if (finalPassword) {
+      hashedPassword = await bcrypt.hash(finalPassword, 10);
     }
 
-    await user.update({
-      username: Username || user.username,
-      password: hashedPassword,
-      name: Nombre || user.name,
-      lastName: Apellido || user.lastName,
-      phone: Telefono || user.phone,
-      email: Email || user.email,
-      role: Role || user.role
-    });
+    // Crear objeto de actualización
+    const updateData = {};
+    if (finalUsername !== undefined) updateData.username = finalUsername;
+    if (finalPassword !== undefined) updateData.password = hashedPassword;
+    if (finalName !== undefined) updateData.name = finalName;
+    if (finalLastName !== undefined) updateData.lastName = finalLastName;
+    if (finalPhone !== undefined) updateData.phone = finalPhone;
+    if (finalEmail !== undefined) updateData.email = finalEmail;
+    if (finalRole !== undefined) updateData.role = finalRole;
+    if (patientId !== undefined) updateData.patientId = patientId;
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    await user.update(updateData);
+
+    // Recargar el usuario para obtener los datos actualizados
+    await user.reload();
 
     // Excluir la contraseña en la respuesta
     const { password: _, ...userWithoutPassword } = user.toJSON();
