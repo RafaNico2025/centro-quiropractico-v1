@@ -18,6 +18,8 @@ Este proyecto está desarrollado como un sistema completo para la administració
 - **Estadísticas**: Reportes y análisis de datos del consultorio
 - **Dashboard**: Panel de control para profesionales y pacientes
 - **Recuperación de Contraseña**: Sistema completo de reset de contraseña por email
+- **Generación de Reportes**: Exportación de estadísticas a Excel
+- **Sistema de Notificaciones**: Emails automáticos para citas
 
 ## 🏗️ Arquitectura del Proyecto
 
@@ -59,6 +61,8 @@ centro-quiro-vite/
 - **Crypto** - Generación de tokens seguros para reset de contraseña
 - **Swagger** - Documentación de API
 - **ExcelJS** - Generación de reportes en Excel
+- **Nodemailer** - Envío de correos electrónicos
+- **Axios** - Cliente HTTP para notificaciones externas
 
 ## 🚀 Instalación y Configuración
 
@@ -234,6 +238,8 @@ npm run lint       # Ejecutar linter
 - Control de contabilidad y facturación
 - Generación de reportes estadísticos
 - Gestión de historiales clínicos
+- Exportación de estadísticas a Excel
+- Sistema de notificaciones automáticas
 
 ### Para Pacientes
 - Dashboard personal
@@ -245,6 +251,8 @@ npm run lint       # Ejecutar linter
 - Recuperación de contraseña por email
 - Formulario de contacto integrado
 - Interfaz responsive y moderna
+- Botón flotante de WhatsApp para contacto directo
+- Sistema de notificaciones por email
 
 ## 🔐 Autenticación y Seguridad
 
